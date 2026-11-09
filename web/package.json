@@ -1,0 +1,31 @@
+{
+  "name": "project-conferidor-web",
+  "private": true,
+  "version": "0.1.0",
+  "author": {
+    "name": "rosa gus",
+    "email": "rosagus.contato@protonmail.com",
+    "url": "https://rosa-gus.github.io/portfolio/"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "web:typecheck": "svelte-check --tsconfig ./tsconfig.json",
+    "web:test": "node --test tests/*.test.mjs",
+    "build": "npm run check && vite build"
+  },
+  "dependencies": {
+    "carbon-components-svelte": "^0.113.1",
+    "carbon-icons-svelte": "^13.18.0",
+    "svelte": "^5.57.1"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "svelte-check": "^4.7.8",
+    "typescript": "^6.0.3",
+    "vite": "^8.3.6"
+  },
+  "license": "Apache-2.0",
+  "source": "https://github.com/rosa-gus"
+}

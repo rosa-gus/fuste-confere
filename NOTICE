@@ -1,0 +1,45 @@
+Project Conferidor
+Copyright 2026 Luis Gustavo R.C.
+https://rosa-gus.github.io/portfolio/
+
+Project Conferidor is licensed under the Apache License, Version 2.0.
+
+Third-party software and fonts retain their original licenses and notices:
+
+Microsoft.Data.Sqlite and Microsoft.Data.Sqlite.Core
+Copyright (c) .NET Foundation and Contributors
+MIT License
+https://github.com/dotnet/efcore
+License: licenses/Microsoft.Data.Sqlite-MIT.txt in the API distribution.
+
+SQLitePCLRaw (bundle_e_sqlite3, core, provider.e_sqlite3, lib.e_sqlite3)
+Copyright 2014-2024 SourceGear, LLC
+Apache License, Version 2.0
+https://github.com/ericsink/SQLitePCL.raw
+License: LICENSE.txt in the API distribution.
+
+Carbon Components Svelte and Carbon Icons Svelte
+Copyright 2019 IBM
+Apache License, Version 2.0
+https://github.com/carbon-design-system/carbon-components-svelte
+https://github.com/carbon-design-system/carbon-icons-svelte
+License: licenses/carbon-LICENSE.txt in the web distribution.
+
+Svelte
+Copyright (c) 2016-2025 Svelte Contributors
+MIT License
+https://github.com/sveltejs/svelte
+License: licenses/svelte-LICENSE.txt in the web distribution.
+
+flatpickr (a dependency of Carbon Components Svelte)
+MIT License
+https://github.com/flatpickr/flatpickr
+License: licenses/flatpickr-LICENSE.txt in the web distribution.
+
+IBM Plex Sans
+Copyright 2019 IBM Corp. All rights reserved.
+SIL Open Font License, Version 1.1
+License: fonts/OFL.txt in the web distribution.
+
+In the source tree, the web distribution's license files are located under
+web/public. Third-party notices do not change the license of Project Conferidor.

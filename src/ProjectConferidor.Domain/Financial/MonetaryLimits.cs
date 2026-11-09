@@ -1,0 +1,12 @@
+using System.Globalization;
+
+namespace ProjectConferidor.Domain.Financial;
+
+public static class MonetaryLimits
+{
+    // A technical input limit, not a tax or accounting rule. Keeps commission
+    // products and per-sale totals bounded, and cent values safe in the web UI.
+    public const decimal MaximumAmount = 999_999_999_999.99m;
+
+    public static string MaximumAmountText => MaximumAmount.ToString(CultureInfo.InvariantCulture);
+}

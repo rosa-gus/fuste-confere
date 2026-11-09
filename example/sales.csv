@@ -1,0 +1,51 @@
+sale_id;sale_date;gross_amount;order_id;invoice_number;customer_name;customer_city;customer_state;representative;currency
+VEN-202602-0001;26/02/2026;4.680,90;PED-108401;NF-084201;Casa Horizonte Materiais;Fortaleza;CE;Marina Azevedo;BRL
+VEN-202602-0002;27/02/2026;12.350,40;PED-108402;NF-084202;"Casa & Obra; unidade Centro";Recife;PE;Marina Azevedo;BRL
+VEN-202603-0003;02/03/2026;2.845,70;PED-108403;NF-084203;Construtora Vereda Norte;Maracanaú;CE;Marina Azevedo;BRL
+VEN-202603-0004;02/03/2026;12.680,40;PED-108404;NF-084204;Comercial Vale do Sol;Juazeiro do Norte;CE;Marina Azevedo;BRL
+VEN-202603-0005;03/03/2026;915,90;PED-108405;NF-084205;Comercial Rota das Pedras;Crato;CE;Marina Azevedo;BRL
+VEN-202603-0006;03/03/2026;7.420,35;PED-108406;NF-084206;Depósito Sertão Novo;Sobral;CE;Marina Azevedo;BRL
+VEN-202603-0007;04/03/2026;100,10;PED-108407;NF-084207;Ferragens Lagoa Clara;Mossoró;RN;Marina Azevedo;BRL
+VEN-202603-0008;05/03/2026;18.360,00;PED-108408;NF-084208;Armazém Boa Jornada;Caruaru;PE;Marina Azevedo;BRL
+VEN-202603-0009;05/03/2026;3.899,99;PED-108409;NF-084209;Armazém Ponta Verde;João Pessoa;PB;Marina Azevedo;BRL
+VEN-202603-0010;06/03/2026;5.640,80;PED-108410;NF-084210;Materiais Costa Serena;Caucaia;CE;Marina Azevedo;BRL
+VEN-202603-0011;06/03/2026;22.750,50;PED-108411;NF-084211;Constrular das Dunas;Natal;RN;Marina Azevedo;BRL
+VEN-202603-0012;07/03/2026;1.745,60;PED-108412;NF-084212;Depósito Serra Azul;Campina Grande;PB;Marina Azevedo;BRL
+VEN-202603-0013;08/03/2026;8.920,75;PED-108413;NF-084213;Casa Horizonte Materiais;Fortaleza;CE;Marina Azevedo;BRL
+VEN-202603-0014;08/03/2026;3.410,20;PED-108414;NF-084214;"Casa & Obra; unidade Centro";Recife;PE;Marina Azevedo;BRL
+VEN-202603-0015;09/03/2026;45.680,90;PED-108415;NF-084215;Construtora Vereda Norte;Maracanaú;CE;Marina Azevedo;BRL
+VEN-202603-0016;10/03/2026;1.289,40;PED-108416;NF-084216;Comercial Vale do Sol;Juazeiro do Norte;CE;Marina Azevedo;BRL
+VEN-202603-0017;10/03/2026;6.750,00;PED-108417;NF-084217;Comercial Rota das Pedras;Crato;CE;Marina Azevedo;BRL
+VEN-202603-0018;11/03/2026;21.980,15;PED-108418;NF-084218;Depósito Sertão Novo;Sobral;CE;Marina Azevedo;BRL
+VEN-202603-0019;11/03/2026;4.790,60;PED-108419;NF-084219;Ferragens Lagoa Clara;Mossoró;RN;Marina Azevedo;BRL
+VEN-202603-0020;12/03/2026;13.640,85;PED-108420;NF-084220;Armazém Boa Jornada;Caruaru;PE;Marina Azevedo;BRL
+VEN-202603-0021;13/03/2026;780,30;PED-108421;NF-084221;Armazém Ponta Verde;João Pessoa;PB;Marina Azevedo;BRL
+VEN-202603-0022;13/03/2026;9.640,00;PED-108422;NF-084222;Materiais Costa Serena;Caucaia;CE;Marina Azevedo;BRL
+VEN-202603-0023;14/03/2026;3.125,50;PED-108423;NF-084223;Constrular das Dunas;Natal;RN;Marina Azevedo;BRL
+VEN-202603-0024;14/03/2026;5.789,90;PED-108424;NF-084224;Depósito Serra Azul;Campina Grande;PB;Marina Azevedo;BRL
+VEN-202603-0025;15/03/2026;16.450,70;PED-108425;NF-084225;Casa Horizonte Materiais;Fortaleza;CE;Marina Azevedo;BRL
+VEN-202603-0026;16/03/2026;2.340,25;PED-108426;NF-084226;"Casa & Obra; unidade Centro";Recife;PE;Marina Azevedo;BRL
+VEN-202603-0027;16/03/2026;910,10;PED-108427;NF-084227;Construtora Vereda Norte;Maracanaú;CE;Marina Azevedo;BRL
+VEN-202603-0028;17/03/2026;28.360,40;PED-108428;NF-084228;Comercial Vale do Sol;Juazeiro do Norte;CE;Marina Azevedo;BRL
+VEN-202603-0029;18/03/2026;4.599,95;PED-108429;NF-084229;Comercial Rota das Pedras;Crato;CE;Marina Azevedo;BRL
+VEN-202603-0030;18/03/2026;76.432,18;PED-108430;NF-084230;Depósito Sertão Novo;Sobral;CE;Marina Azevedo;BRL
+VEN-202603-0031;19/03/2026;1.890,00;PED-108431;NF-084231;Ferragens Lagoa Clara;Mossoró;RN;Marina Azevedo;BRL
+VEN-202603-0032;19/03/2026;11.560,65;PED-108432;NF-084232;Armazém Boa Jornada;Caruaru;PE;Marina Azevedo;BRL
+VEN-202603-0033;20/03/2026;3.940,80;PED-108433;NF-084233;Armazém Ponta Verde;João Pessoa;PB;Marina Azevedo;BRL
+VEN-202603-0034;21/03/2026;18.750,30;PED-108434;NF-084234;Materiais Costa Serena;Caucaia;CE;Marina Azevedo;BRL
+VEN-202603-0035;21/03/2026;645,90;PED-108435;NF-084235;Constrular das Dunas;Natal;RN;Marina Azevedo;BRL
+VEN-202603-0036;22/03/2026;7.320,45;PED-108436;NF-084236;Depósito Serra Azul;Campina Grande;PB;Marina Azevedo;BRL
+VEN-202603-0037;22/03/2026;24.980,00;PED-108437;NF-084237;Casa Horizonte Materiais;Fortaleza;CE;Marina Azevedo;BRL
+VEN-202603-0038;23/03/2026;5.120,70;PED-108438;NF-084238;"Casa & Obra; unidade Centro";Recife;PE;Marina Azevedo;BRL
+VEN-202603-0039;24/03/2026;1.369,99;PED-108439;NF-084239;Construtora Vereda Norte;Maracanaú;CE;Marina Azevedo;BRL
+VEN-202603-0040;24/03/2026;9.840,50;PED-108440;NF-084240;Comercial Vale do Sol;Juazeiro do Norte;CE;Marina Azevedo;BRL
+VEN-202603-0041;25/03/2026;32.450,80;PED-108441;NF-084241;Comercial Rota das Pedras;Crato;CE;Marina Azevedo;BRL
+VEN-202603-0042;26/03/2026;2.675,35;PED-108442;NF-084242;Depósito Sertão Novo;Sobral;CE;Marina Azevedo;BRL
+VEN-202603-0043;26/03/2026;15.860,90;PED-108443;NF-084243;Ferragens Lagoa Clara;Mossoró;RN;Marina Azevedo;BRL
+VEN-202603-0044;27/03/2026;4.280,10;PED-108444;NF-084244;Armazém Boa Jornada;Caruaru;PE;Marina Azevedo;BRL
+VEN-202603-0045;27/03/2026;19.640,75;PED-108445;NF-084245;Armazém Ponta Verde;João Pessoa;PB;Marina Azevedo;BRL
+VEN-202603-0046;28/03/2026;8.750,20;PED-108446;NF-084246;Materiais Costa Serena;Caucaia;CE;Marina Azevedo;BRL
+VEN-202603-0047;29/03/2026;1.495,50;PED-108447;NF-084247;Constrular das Dunas;Natal;RN;Marina Azevedo;BRL
+VEN-202603-0048;29/03/2026;22.360,00;PED-108448;NF-084248;Depósito Serra Azul;Campina Grande;PB;Marina Azevedo;BRL
+VEN-202603-0049;30/03/2026;6.380,45;PED-108449;NF-084249;Casa Horizonte Materiais;Fortaleza;CE;Marina Azevedo;BRL
+VEN-202603-0050;31/03/2026;10.450,90;PED-108450;NF-084250;"Casa & Obra; unidade Centro";Recife;PE;Marina Azevedo;BRL

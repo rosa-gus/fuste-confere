@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="src/ProjectConferidor.Domain/ProjectConferidor.Domain.csproj" />
+  <Project Path="src/ProjectConferidor.Application/ProjectConferidor.Application.csproj" />
+  <Project Path="src/ProjectConferidor.Infrastructure/ProjectConferidor.Infrastructure.csproj" />
+  <Project Path="src/ProjectConferidor.Api/ProjectConferidor.Api.csproj" />
+  <Project Path="tests/ProjectConferidor.Persistence.Checks/ProjectConferidor.Persistence.Checks.csproj" />
+</Solution>
