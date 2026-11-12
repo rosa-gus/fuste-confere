@@ -118,6 +118,8 @@ npm run web:test
 npm run web:typecheck
 ```
 
+Para validar o fluxo HTTP com banco temporário e seguir o roteiro de aceite da interface, consulte a [validação ponta a ponta](tests/e2e/README.md).
+
 ### Desenvolvimento de extensões
 
 **TODO:** documentar os pontos de extensão e o fluxo para acrescentar leitores, regras de cálculo e integrações desenvolvidas por terceiros, como ERP e serviços bancários.

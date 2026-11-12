@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "sales": {
+    "delimiter": ";",
+    "numberFormat": "invariant",
+    "dateFormat": "dd/MM/yyyy",
+    "columns": { "externalId": "Pedido", "date": "Emissao", "grossAmount": "Faturado" }
+  },
+  "statement": {
+    "delimiter": ",",
+    "numberFormat": "pt-BR",
+    "dateFormat": "auto",
+    "columns": { "saleExternalId": "Pedido", "commissionAmount": "Comissao" }
+  }
+}
