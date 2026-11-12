@@ -18,7 +18,7 @@ Checklist para consolidar e publicar o núcleo do Project Conferidor. As etapas 
 - [ ] Definir identificação e tratamento de reimportações.
 - [ ] Permitir exportar os resultados da conferência.
 
-O [guia de validação ponta a ponta](tests/e2e/README.md) explica como executar os testes HTTP com banco isolado, usar os arquivos de referência e verificar a interface manualmente. A homologação visual e com arquivos das origens pretendidas continua pendente.
+O [guia de validação ponta a ponta](tests/e2e/README.md) explica como executar os testes HTTP com banco isolado, usar os arquivos de referência e verificar a interface manualmente.
 
 ## Instalação e operação
 

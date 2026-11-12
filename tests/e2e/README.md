@@ -42,6 +42,8 @@ npm --prefix web run web:typecheck
 
 Selecione [mapped-sales.csv](fixtures/mapped-sales.csv) e [mapped-statement.csv](fixtures/mapped-statement.csv). A configuração exata está em [configuration.json](fixtures/configuration.json).
 
+Use `mapped-sales.csv` no campo de vendas e `mapped-statement.csv` no campo de demonstrativo, juntos na mesma conferência. Clique em **Configurar colunas** e ajuste as duas abas conforme a tabela abaixo antes de validar e conferir. Esses arquivos usam cabeçalhos personalizados: no formato padrão, a aplicação informa a ausência das colunas obrigatórias. O demonstrativo contém apenas identificador e comissão; as colunas de data e valor bruto pertencem ao arquivo de vendas.
+
 | Arquivo | Separador | Formato numérico | Data | Mapeamento |
 | --- | --- | --- | --- | --- |
 | Vendas | Ponto e vírgula | Invariante, decimal com ponto | `dd/MM/yyyy` | ID: `Pedido`; data: `Emissao`; valor: `Faturado`. |
@@ -100,10 +102,8 @@ Registre cada cenário como **aprovado**, **reprovado** ou **não executado**, i
 - Reimportar os mesmos arquivos cria uma nova conferência. A identificação de reimportações está prevista no [roadmap](../../ROADMAP.md).
 - Os cenários se concentram em importação, cálculo e histórico. Exportação, pacotes de distribuição, autenticação e backup/restauração ficam fora dessa cobertura.
 - Os arquivos de referência representam layouts distintos, mas são fictícios. Para validar uma origem de dados usada na operação, repita o fluxo com exportações reais anonimizadas e confira os resultados esperados.
-- A aprovação dos testes HTTP não comprova o funcionamento da interface no navegador. Para concluir a validação completa prevista no roadmap, registre também os resultados do roteiro manual e da verificação dos arquivos de cada origem pretendida.
+- Os testes HTTP e o roteiro manual são complementares: as requisições verificam a API e a persistência, enquanto o roteiro verifica a interação no navegador.
 
 ## Registrar uma execução
 
 Ao compartilhar resultados em uma contribuição, informe a revisão do código testada, a data, o ambiente, os comandos executados e os cenários aprovados ou com falha. Para os testes manuais, inclua os IDs `UI-01` a `UI-15` e as evidências necessárias para reproduzir problemas. Identifique explicitamente os cenários não executados.
-
-O [registro de validação](VALIDATION.md) contém os resultados de uma execução anterior. Ele serve como referência; execute novamente as verificações ao avaliar alterações no projeto.
