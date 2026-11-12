@@ -8,14 +8,14 @@ public sealed class ImportProfileUseCases(ICompanyRepository companies, IImportP
 {
     public async Task<OperationResult<IReadOnlyList<ImportProfile>>> ListAsync(Guid companyId, CancellationToken cancellationToken) =>
         await companies.FindCompanyAsync(companyId, cancellationToken) is null
-            ? OperationResult<IReadOnlyList<ImportProfile>>.Failure("Company not found.", 404)
+            ? OperationResult<IReadOnlyList<ImportProfile>>.Failure("Representada não encontrada.", 404)
             : OperationResult<IReadOnlyList<ImportProfile>>.Success(await profiles.ListImportProfilesAsync(companyId, cancellationToken));
 
     public async Task<OperationResult<ImportProfile>> CreateAsync(Guid companyId, string name,
         ImportConfiguration configuration, CancellationToken cancellationToken)
     {
         if (await companies.FindCompanyAsync(companyId, cancellationToken) is null)
-            return OperationResult<ImportProfile>.Failure("Company not found.", 404);
+            return OperationResult<ImportProfile>.Failure("Representada não encontrada.", 404);
         var error = Validate(name, configuration);
         if (error is not null) return OperationResult<ImportProfile>.Failure(error);
         var now = DateTimeOffset.UtcNow;
@@ -26,17 +26,17 @@ public sealed class ImportProfileUseCases(ICompanyRepository companies, IImportP
             return OperationResult<ImportProfile>.Success(profile);
         }
         catch (RepositoryConflictException exception) { return OperationResult<ImportProfile>.Failure(exception.Message, 409); }
-        catch (KeyNotFoundException) { return OperationResult<ImportProfile>.Failure("Company not found.", 404); }
+        catch (KeyNotFoundException) { return OperationResult<ImportProfile>.Failure("Representada não encontrada.", 404); }
     }
 
     public async Task<OperationResult<ImportProfile>> UpdateAsync(Guid companyId, Guid id, string name,
         int expectedRevision, ImportConfiguration configuration, CancellationToken cancellationToken)
     {
         var existing = await profiles.FindImportProfileAsync(companyId, id, cancellationToken);
-        if (existing is null) return OperationResult<ImportProfile>.Failure("Import profile not found.", 404);
+        if (existing is null) return OperationResult<ImportProfile>.Failure("Perfil de importação não encontrado. Ele pode ter sido excluído em outra sessão.", 404);
         if (expectedRevision < 1 || existing.Revision != expectedRevision)
-            return OperationResult<ImportProfile>.Failure("The import profile was changed. Reload it before saving.", 409);
-        if (expectedRevision == int.MaxValue) return OperationResult<ImportProfile>.Failure("Import profile revision limit reached.", 409);
+            return OperationResult<ImportProfile>.Failure("O perfil de importação foi alterado. Recarregue-o antes de salvar.", 409);
+        if (expectedRevision == int.MaxValue) return OperationResult<ImportProfile>.Failure("O perfil de importação atingiu o limite de revisões.", 409);
         var error = Validate(name, configuration);
         if (error is not null) return OperationResult<ImportProfile>.Failure(error);
         var updated = existing with
@@ -50,7 +50,7 @@ public sealed class ImportProfileUseCases(ICompanyRepository companies, IImportP
         {
             return await profiles.UpdateAsync(updated, expectedRevision, cancellationToken)
                 ? OperationResult<ImportProfile>.Success(updated)
-                : OperationResult<ImportProfile>.Failure("The import profile was changed or deleted. Reload it before saving.", 409);
+                : OperationResult<ImportProfile>.Failure("O perfil de importação foi alterado ou excluído. Recarregue-o antes de salvar.", 409);
         }
         catch (RepositoryConflictException exception) { return OperationResult<ImportProfile>.Failure(exception.Message, 409); }
     }
@@ -58,11 +58,11 @@ public sealed class ImportProfileUseCases(ICompanyRepository companies, IImportP
     public async Task<OperationResult<bool>> DeleteAsync(Guid companyId, Guid id, CancellationToken cancellationToken) =>
         await profiles.DeleteImportProfileAsync(companyId, id, cancellationToken)
             ? OperationResult<bool>.Success(true)
-            : OperationResult<bool>.Failure("Import profile not found.", 404);
+            : OperationResult<bool>.Failure("Perfil de importação não encontrado. Ele pode ter sido excluído em outra sessão.", 404);
 
     private static string? Validate(string name, ImportConfiguration configuration)
     {
-        if (string.IsNullOrWhiteSpace(name) || name.Trim().Length > 160) return "Import profile name must contain between 1 and 160 characters.";
+        if (string.IsNullOrWhiteSpace(name) || name.Trim().Length > 160) return "O nome do perfil de importação deve ter entre 1 e 160 caracteres.";
         var errors = ImportConfiguration.Validate(configuration);
         return errors.Count > 0 ? string.Join("\n", errors) : null;
     }

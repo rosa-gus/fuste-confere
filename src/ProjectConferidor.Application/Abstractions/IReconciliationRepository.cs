@@ -8,6 +8,7 @@ public interface IReconciliationRepository
     Task<CommissionReconciliation?> FindReconciliationAsync(Guid id, CancellationToken cancellationToken);
     /// <exception cref="KeyNotFoundException">The company no longer exists at write time.</exception>
     Task AddAsync(CommissionReconciliation reconciliation, CancellationToken cancellationToken);
+    Task<CommissionReconciliation> AddImportAsync(CommissionReconciliation reconciliation, CancellationToken cancellationToken);
     /// <summary>Deletes only the matching company's reconciliation, including its embedded lines.</summary>
     Task<bool> DeleteReconciliationAsync(Guid companyId, Guid id, CancellationToken cancellationToken);
 }

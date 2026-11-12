@@ -4,7 +4,7 @@ namespace ProjectConferidor.Infrastructure.Persistence;
 
 internal sealed class ConferidorDatabase
 {
-    private const int SchemaVersion = 2;
+    private const int SchemaVersion = 3;
     private const int ApplicationId = 0x434F4E46; // CONF
     private readonly SemaphoreSlim _initializationGate = new(1, 1);
     private readonly string _directory;
@@ -73,6 +73,14 @@ internal sealed class ConferidorDatabase
                 using (var profiles = connection.CreateCommand(MigrationV2Profiles, transaction))
                     await profiles.ExecuteNonQueryAsync(cancellationToken);
             }
+            if (version < 3)
+            {
+                foreach (var sql in MigrationV3)
+                {
+                    using var command = connection.CreateCommand(sql, transaction);
+                    await command.ExecuteNonQueryAsync(cancellationToken);
+                }
+            }
             if (version == 0)
                 await LegacyJsonMigration.ImportAsync(connection, transaction, Path.Combine(_directory, "project-conferidor.json"), cancellationToken);
             if (version < SchemaVersion)
@@ -105,6 +113,15 @@ internal sealed class ConferidorDatabase
             throw;
         }
     }
+
+    private static readonly string[] MigrationV3 = [
+        "ALTER TABLE reconciliations ADD COLUMN import_fingerprint TEXT;",
+        "ALTER TABLE reconciliations ADD COLUMN request_id TEXT;",
+        "ALTER TABLE reconciliations ADD COLUMN request_intent TEXT;",
+        "ALTER TABLE reconciliations ADD COLUMN reprocessed_from_id TEXT REFERENCES reconciliations(id) ON DELETE SET NULL;",
+        "CREATE INDEX ix_reconciliations_fingerprint ON reconciliations(company_id, import_fingerprint, created_at_ticks DESC);",
+        "CREATE UNIQUE INDEX ix_reconciliations_request ON reconciliations(company_id, request_id) WHERE request_id IS NOT NULL;"
+    ];
 
     private const string MigrationV2SnapshotColumn = "ALTER TABLE reconciliations ADD COLUMN import_configuration_json TEXT;";
 

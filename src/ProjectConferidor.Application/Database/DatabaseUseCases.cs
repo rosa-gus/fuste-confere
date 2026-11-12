@@ -9,7 +9,7 @@ public sealed class DatabaseUseCases(IDatabaseRepository database)
     {
         if (confirmation != "RESET")
         {
-            return OperationResult<bool>.Failure("Provide 'RESET' as confirmation to reset the database.");
+            return OperationResult<bool>.Failure("Informe 'RESET' para confirmar a limpeza do banco de dados.");
         }
 
         await database.ResetAsync(cancellationToken);

@@ -2,8 +2,7 @@
   import { onDestroy, untrack } from "svelte";
   import { Button, InlineLoading, Modal, Select, SelectItem, Tab, TabContent, Tabs, TextInput } from "carbon-components-svelte";
   import { api, ApiError } from "../api";
-  import { explainApiError } from "../format";
-  import { getImportDateFormatHelp, getImportIssueMessage, importConfigurationKey, isImportPreviewCurrent, type ImportPreviewIdentity } from "../csv-import";
+  import { getImportDateFormatHelp, importConfigurationKey, isImportPreviewCurrent, type ImportPreviewIdentity } from "../csv-import";
   import type { ImportConfiguration, ImportPreview, ImportPreviewSource, ImportProfile, ImportSourceKind, SourceImportConfiguration } from "../types";
   import SectionHeader from "./SectionHeader.svelte";
   import CsvMappingEditor from "./CsvMappingEditor.svelte";
@@ -107,7 +106,7 @@
       profiles = result;
     } catch (error) {
       if (companyId === id && workspaceRequestId === workspace && requestId === profileRequestId) {
-        profileError = "Não foi possível carregar os perfis de importação. O formato padrão continua disponível.";
+        profileError = error instanceof ApiError ? error.message : "Não foi possível carregar os perfis de importação. O formato padrão continua disponível.";
       }
     } finally {
       if (companyId === id && workspaceRequestId === workspace && requestId === profileRequestId) loadingProfiles = false;
@@ -150,7 +149,7 @@
       onValidated(result.isValid && result.validationComplete);
     } catch (error) {
       if (!isImportPreviewCurrent(snapshot, identity())) return;
-      previewError = error instanceof ApiError ? explainApiError(error.message) : "Não foi possível analisar os arquivos. Tente novamente.";
+      previewError = error instanceof ApiError ? error.message : "Não foi possível analisar os arquivos. Tente novamente.";
     } finally {
       if (snapshot.requestId === previewRequestId) previewing = false;
     }
@@ -178,12 +177,10 @@
       if (destroyed || companyId !== id || workspaceRequestId !== workspace) return;
       if (error instanceof ApiError && error.status === 409) {
         revisionConflict = update;
-        profileError = update
-          ? "Este perfil foi alterado em outra sessão. Selecione-o novamente para carregar a versão atual ou salve suas alterações com outro nome."
-          : "Já existe um perfil com esse nome. Escolha outro nome.";
+        profileError = error.message;
         await loadProfiles(id, workspace);
       } else {
-        profileError = "Não foi possível salvar o perfil. Tente novamente.";
+        profileError = error instanceof ApiError ? error.message : "Não foi possível salvar o perfil. Tente novamente.";
       }
     } finally {
       if (!destroyed && companyId === id && workspaceRequestId === workspace) saving = false;
@@ -207,10 +204,10 @@
       }
       profileToDelete = null;
       onNotice("Perfil excluído. A configuração em uso foi preservada para esta conferência.");
-    } catch {
+    } catch (error) {
       if (!destroyed && companyId === id && workspaceRequestId === workspace) {
         profileToDelete = null;
-        profileError = "Não foi possível excluir o perfil. Tente novamente.";
+        profileError = error instanceof ApiError ? error.message : "Não foi possível excluir o perfil. Tente novamente.";
       }
     } finally {
       if (!destroyed && companyId === id && workspaceRequestId === workspace) saving = false;
@@ -277,7 +274,7 @@
         <div class="csv-issues" role="region" aria-label="Problemas de importação" tabindex="0">
           <ul>
             {#each preview.issues as issue, index (index)}
-              <li><strong>{issue.sourceKind === "sales" ? "Vendas" : issue.sourceKind === "statement" ? "Demonstrativo" : "Configuração"}{#if issue.row !== null}, linha {issue.row}{/if}{#if issue.column}, coluna “{issue.column}”{/if}:</strong> {getImportIssueMessage(issue)}{#if issue.code === "invalid_date"} {getImportDateFormatHelp(draft.sales.dateFormat)}{/if}</li>
+              <li><strong>{issue.sourceKind === "sales" ? "Vendas" : issue.sourceKind === "statement" ? "Demonstrativo" : "Configuração"}{#if issue.row !== null}, linha {issue.row}{/if}{#if issue.column}, coluna “{issue.column}”{/if}:</strong> {issue.message}{#if issue.code === "invalid_date"} {getImportDateFormatHelp(draft.sales.dateFormat)}{/if}</li>
             {/each}
           </ul>
           {#if preview.issuesTruncated}<p>A lista mostra apenas parte dos {preview.totalIssues} problemas encontrados.</p>{/if}
@@ -299,7 +296,7 @@
 </div>
 
 {#if profileToDelete}
-  <Modal open danger alert size="sm" modalHeading="Excluir perfil de importação?" primaryButtonText="Excluir perfil" secondaryButtons={[{ text: "Cancelar", disabled: saving }]} primaryButtonDisabled={saving} primaryButtonLoading={saving} primaryButtonLoadingDescription="Excluindo perfil…" hideCloseButton={saving} preventCloseOnClickOutside on:close={closeDeleteProfile} on:click:button--secondary={() => closeDeleteProfile()} on:submit={() => void deleteProfile()}>
+  <Modal open danger alert size="sm" modalLabel="Perfis de importação" modalHeading="Excluir perfil de importação?" primaryButtonText="Excluir perfil" secondaryButtons={[{ text: "Cancelar", disabled: saving }]} primaryButtonDisabled={saving} primaryButtonLoading={saving} primaryButtonLoadingDescription="Excluindo perfil…" hideCloseButton={saving} preventCloseOnClickOutside on:close={closeDeleteProfile} on:click:button--secondary={() => closeDeleteProfile()} on:submit={() => void deleteProfile()}>
     <p>O perfil “{profileToDelete.name}” será excluído. As conferências salvas e os arquivos não serão alterados.</p>
   </Modal>
 {/if}

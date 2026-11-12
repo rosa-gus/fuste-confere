@@ -48,10 +48,10 @@ public sealed partial class CsvSourceFileReader
                 var dateText = Get(row.Cells, salesIndexes["date"]);
                 DateOnly date = default;
                 if (!TryConfiguredDate(dateText, effective.Sales.DateFormat, out date))
-                    AddCellIssue(collector, "sales", row.Line, "date", effective.Sales, "invalid_date", "The sale date does not match the selected format.");
+                    AddCellIssue(collector, "sales", row.Line, "date", effective.Sales, "invalid_date", "A data não corresponde ao formato selecionado.");
                 var amount = ReadAmount(row, salesIndexes["grossAmount"], "sales", "grossAmount", effective.Sales, collector);
                 if (id is not null && !seenIds.Add(id))
-                    AddCellIssue(collector, "sales", row.Line, "externalId", effective.Sales, "duplicate_id", $"The sales file contains a duplicate sale ID: {id}.");
+                    AddCellIssue(collector, "sales", row.Line, "externalId", effective.Sales, "duplicate_id", $"O arquivo de vendas repete o identificador {id}.");
                 if (before != collector.Total) continue;
                 var item = Sale.Create(id!, date, amount!.Value);
                 salesRows.Add(new(item.ExternalId, item.Date, item.GrossAmount));
@@ -63,7 +63,7 @@ public sealed partial class CsvSourceFileReader
                 });
             }
             if (salesTable.Rows.Count == 0 && salesTable.Headers.Count > 0)
-                collector.Add(new("sales", null, null, null, "no_records", "The sales file contains no records."));
+                collector.Add(new("sales", null, null, null, "no_records", "O arquivo de vendas não contém registros."));
             var totals = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
             foreach (var row in statementTable.Rows)
             {
@@ -77,7 +77,7 @@ public sealed partial class CsvSourceFileReader
                 var previous = totals.GetValueOrDefault(item.SaleExternalId);
                 if (item.CommissionAmount > MonetaryLimits.MaximumAmount - previous)
                     AddCellIssue(collector, "statement", row.Line, "commissionAmount", effective.Statement, "total_exceeds_limit",
-                        $"Reported commission total for sale ID {item.SaleExternalId} must not exceed {MonetaryLimits.MaximumAmountText}.");
+                        $"A soma das comissões informadas para a venda {item.SaleExternalId} deve ser de, no máximo, {MonetaryLimits.MaximumAmountDisplay}.");
                 else totals[item.SaleExternalId] = previous + item.CommissionAmount;
                 statementRows.Add(new(item.SaleExternalId, item.CommissionAmount));
                 if (normalizedStatement.Count < PreviewRows) normalizedStatement.Add(new()
@@ -121,15 +121,15 @@ public sealed partial class CsvSourceFileReader
     {
         foreach (var error in table.Errors)
         {
-            var rowMatch = System.Text.RegularExpressions.Regex.Match(error, @"at row (\d+)");
+            var rowMatch = System.Text.RegularExpressions.Regex.Match(error, @"na linha (\d+)");
             collector.Add(new(kind, rowMatch.Success ? int.Parse(rowMatch.Groups[1].Value, CultureInfo.InvariantCulture) : null,
                 null, null, "invalid_csv", error));
         }
         foreach (var group in table.Headers.Select((header, index) => (header, index)).GroupBy(item => item.header, StringComparer.Ordinal))
         {
             if (group.Count() > 1) collector.Add(new(kind, 1, (table.OriginalHeaders ?? table.Headers)[group.First().index], null,
-                "duplicate_header", "The file contains duplicate column headers. Rename them before mapping."));
-            else if (group.Key.Length == 0) collector.Add(new(kind, 1, "", null, "empty_header", "Each CSV column must have a header."));
+                "duplicate_header", "O arquivo contém cabeçalhos repetidos. Renomeie-os antes de configurar as colunas."));
+            else if (group.Key.Length == 0) collector.Add(new(kind, 1, "", null, "empty_header", "Todas as colunas devem ter um título no cabeçalho."));
         }
         if (!validateMapping) return null;
         var indexes = new Dictionary<string, int>();
@@ -141,7 +141,7 @@ public sealed partial class CsvSourceFileReader
             if (matches.Count != 1)
             {
                 collector.Add(new(kind, 1, column, field, matches.Count == 0 ? "missing_column" : "ambiguous_column",
-                    matches.Count == 0 ? $"Mapped column is missing: {column}." : $"Mapped column is ambiguous: {column}."));
+                    matches.Count == 0 ? $"A coluna configurada “{column}” não foi encontrada no arquivo." : $"Há mais de uma coluna com o nome “{column}”. Use cabeçalhos distintos."));
                 valid = false;
             }
             else indexes[field] = matches[0].index;
@@ -154,7 +154,7 @@ public sealed partial class CsvSourceFileReader
         var value = Get(row.Cells, index);
         if (value.Length is 0 or > 120)
         {
-            AddCellIssue(collector, kind, row.Line, field, source, "invalid_id", "Sale ID must contain between 1 and 120 characters.");
+            AddCellIssue(collector, kind, row.Line, field, source, "invalid_id", "O identificador da venda deve ter até 120 caracteres.");
             return null;
         }
         return value;
@@ -165,12 +165,12 @@ public sealed partial class CsvSourceFileReader
         // Reuse the exact strict grouping/culture parser; format is independent of delimiter.
         if (!TryParseAmount(Get(row.Cells, index), source.NumberFormat == "pt-BR" ? ';' : ',', out var value) || value < 0)
         {
-            AddCellIssue(collector, kind, row.Line, field, source, "invalid_amount", "The amount must be non-negative and match the selected number format.");
+            AddCellIssue(collector, kind, row.Line, field, source, "invalid_amount", "O valor deve ser maior ou igual a zero e corresponder ao formato numérico selecionado.");
             return null;
         }
         if (value > MonetaryLimits.MaximumAmount)
         {
-            AddCellIssue(collector, kind, row.Line, field, source, "amount_exceeds_limit", $"The amount must not exceed {MonetaryLimits.MaximumAmountText}.");
+            AddCellIssue(collector, kind, row.Line, field, source, "amount_exceeds_limit", $"O valor deve ser de, no máximo, {MonetaryLimits.MaximumAmountDisplay}.");
             return null;
         }
         return value;

@@ -2,7 +2,6 @@
   import ToastRegion from "./ToastRegion.svelte";
   import { ToastNotification, Modal } from "carbon-components-svelte";
   import { api, ApiError } from "../api";
-  import { explainApiError } from "../format";
   import type { Company } from "../types";
 
   let { company, onClose, onDeleted }: {
@@ -35,7 +34,7 @@
       await api.deleteCompany(target.id);
     } catch (error) {
       errorMessage = error instanceof ApiError
-        ? explainApiError(error.message)
+        ? error.message
         : "Não foi possível excluir a representada. Tente novamente.";
       return;
     } finally {
@@ -50,6 +49,7 @@
   size="sm"
   danger
   alert
+  modalLabel="Cadastro de representadas"
   modalHeading="Excluir representada?"
   iconDescription="Fechar confirmação de exclusão"
   primaryButtonText="Excluir representada"

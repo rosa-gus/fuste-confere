@@ -37,6 +37,10 @@ npm --prefix web run web:typecheck
 | Rejeições | Data impossível, valor incompatível, ID de venda repetido e coluna mapeada inexistente: rejeitar sem histórico parcial. |
 | Separação de empresas | Histórico vazio na outra empresa; tentativa de excluir conferência alheia retorna 404 e preserva os dados. |
 | Reinício | Histórico, valores e configurações das duas conferências e perfil recuperados sem alteração. |
+| Reimportações | Arquivos repetidos retornam conflito; confirmação cria outro resultado sem alterar o anterior, usando os acordos atuais. |
+| Repetição de requisições | A mesma tentativa retorna o resultado já salvo, inclusive após reinício e exclusão da conferência de origem. |
+| Envios simultâneos | Importações normais repetidas geram uma conferência; reenvios da mesma confirmação também geram apenas uma. |
+| Mensagens da API | Validações, diagnósticos de CSV, títulos de conflito e erros de requisições inválidas são retornados em português; campos e códigos técnicos permanecem estáveis. |
 
 ## Arquivos e resultados do layout personalizado
 
@@ -96,14 +100,19 @@ Registre cada cenário como **aprovado**, **reprovado** ou **não executado**, i
 | UI-13 | Cadastrar e selecionar uma segunda empresa; voltar à primeira. | Acordos, perfis e histórico correspondem à empresa selecionada. |
 | UI-14 | Recarregar a página; parar a API e reiniciar com a mesma pasta de teste; abrir as duas conferências. | Valores e configurações históricos preservados; perfil continua disponível. |
 | UI-15 | Em tela estreita e pelo teclado, percorrer cadastro, seleção de arquivos, configuração e resultados. | Ações acessíveis, foco visível e resultados consultáveis; registrar cortes ou bloqueios. |
+| UI-16 | Reenviar os arquivos de uma conferência salva, com o mesmo formato. | Aviso de repetição com a data da conferência anterior; nenhum registro adicional no histórico. |
+| UI-17 | No aviso, escolher **Cancelar**; repetir e escolher **Abrir conferência anterior** no corpo do diálogo. | Cancelar preserva os arquivos; abrir recupera o resultado salvo sem recalcular e também preserva os arquivos selecionados. |
+| UI-18 | Repetir o envio e escolher **Conferir novamente**. | Outra conferência aparece no histórico, com os valores anteriores preservados na conferência original. |
+| UI-19 | Alterar um acordo e repetir os mesmos arquivos, confirmando a nova execução. | Aviso continua aparecendo; o novo resultado usa os acordos atuais e o anterior permanece inalterado. |
+| UI-20 | Testar o aviso pelo teclado e simular falha de rede no reenvio confirmado; restabelecer a conexão e tentar novamente. | Foco inicial em **Conferir novamente**, ações bloqueadas durante o envio e apenas uma conferência para a mesma tentativa, mesmo se a primeira resposta se perder. |
 
 ## Cobertura e limitações
 
-- Reimportar os mesmos arquivos cria uma nova conferência. A identificação de reimportações está prevista no [roadmap](../../ROADMAP.md).
+- A identificação de reimportações compara os bytes dos arquivos e a configuração de leitura por empresa. Arquivos equivalentes com formatação diferente são considerados novos; consulte a seção de [reimportações](../../README.md#reimportações).
 - Os cenários se concentram em importação, cálculo e histórico. Exportação, pacotes de distribuição, autenticação e backup/restauração ficam fora dessa cobertura.
 - Os arquivos de referência representam layouts distintos, mas são fictícios. Para validar uma origem de dados usada na operação, repita o fluxo com exportações reais anonimizadas e confira os resultados esperados.
 - Os testes HTTP e o roteiro manual são complementares: as requisições verificam a API e a persistência, enquanto o roteiro verifica a interação no navegador.
 
 ## Registrar uma execução
 
-Ao compartilhar resultados em uma contribuição, informe a revisão do código testada, a data, o ambiente, os comandos executados e os cenários aprovados ou com falha. Para os testes manuais, inclua os IDs `UI-01` a `UI-15` e as evidências necessárias para reproduzir problemas. Identifique explicitamente os cenários não executados.
+Ao compartilhar resultados em uma contribuição, informe a revisão do código testada, a data, o ambiente, os comandos executados e os cenários aprovados ou com falha. Para os testes manuais, inclua os IDs `UI-01` a `UI-20` e as evidências necessárias para reproduzir problemas. Identifique explicitamente os cenários não executados.

@@ -1,6 +1,6 @@
 # Roadmap
 
-Checklist para consolidar e publicar o núcleo do Project Conferidor. As etapas pendentes não têm prazo definido.
+Checklist para consolidar e publicar o núcleo do Project Conferidor. Os próximos passos priorizam a exportação de resultados e a preparação para distribuição, além das validações manuais pendentes. As etapas pendentes não têm prazo definido.
 
 ## Base disponível
 
@@ -10,15 +10,37 @@ Checklist para consolidar e publicar o núcleo do Project Conferidor. As etapas 
 - [x] Histórico em SQLite e filtros de resultados.
 - [x] Separação entre domínio, aplicação, infraestrutura e API.
 - [x] Verificações automatizadas das regras e da persistência.
+- [x] Mensagens da API em pt-BR, exibidas diretamente pela interface.
+- [x] Rótulos de contexto acima do título em todos os modais, usando o componente do Carbon.
 
-## Consolidação do núcleo
+## Validação do núcleo
 
-- [ ] Validar o fluxo completo com arquivos de diferentes origens.
-- [ ] Revisar limites, duplicidades e mensagens de validação.
-- [ ] Definir identificação e tratamento de reimportações.
-- [ ] Permitir exportar os resultados da conferência.
+- [x] Automatizar o fluxo HTTP de cadastro, acordos, importação, conferência e histórico com banco isolado.
+- [x] Verificar os resultados financeiros do exemplo mensal e de um layout personalizado.
+- [x] Verificar perfis de importação e preservação do histórico após reiniciar a API.
+- [x] Validar na interface a rejeição de identificadores repetidos, valores inválidos e datas inválidas.
+- [x] Validar na interface a importação com colunas e formatos personalizados.
+- [ ] Completar o roteiro manual de filtros, paginação, limite de arquivos, separação de empresas, reinício e acessibilidade.
+- [ ] Homologar o fluxo com exportações reais anonimizadas das origens pretendidas.
 
 O [guia de validação ponta a ponta](tests/e2e/README.md) explica como executar os testes HTTP com banco isolado, usar os arquivos de referência e verificar a interface manualmente.
+
+## Reimportações
+
+- [x] Identificar arquivos já processados por empresa pelo conteúdo exato e pela configuração de importação.
+- [x] Persistir a identificação das importações, mantendo compatibilidade com o histórico existente.
+- [x] Avisar sobre repetições e permitir abrir a conferência anterior ou executar novamente de forma explícita.
+- [x] Preservar as conferências anteriores quando arquivos forem reprocessados, inclusive após mudanças nos acordos.
+- [x] Evitar duplicações ao repetir a mesma tentativa após uma falha de conexão.
+- [x] Verificar automaticamente repetições, mudanças de configuração e acordos, isolamento entre empresas e envios simultâneos.
+- [x] Aplicar o padrão transacional do Carbon ao diálogo, com duas ações no rodapé e consulta anterior no corpo.
+- [ ] Validar manualmente o diálogo de reimportação, o foco e a recuperação após falhas de rede conforme o roteiro E2E.
+
+## Exportação de resultados
+
+- [ ] Definir as colunas e os formatos do CSV e o comportamento da exportação completa ou filtrada.
+- [ ] Permitir exportar uma conferência salva com identificadores, valores, percentuais, diferenças e situações.
+- [ ] Verificar a fidelidade dos valores exportados e a distinção entre zero e ausência de valor.
 
 ## Instalação e operação
 

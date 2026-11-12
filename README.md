@@ -82,6 +82,12 @@ O arquivo de vendas deve conter uma linha por identificador. Entradas repetidas 
 
 Os resultados e as configurações utilizadas são salvos; os arquivos originais não são armazenados. Guarde-os caso precise repetir a importação.
 
+### Reimportações
+
+Ao enviar novamente os mesmos arquivos para a mesma empresa com a mesma configuração de leitura, a aplicação avisa que eles já foram conferidos. Você pode abrir o resultado anterior ou escolher **Conferir novamente** para calcular com os acordos atuais e salvar outro resultado. A conferência anterior é preservada.
+
+A identificação compara o conteúdo exato dos arquivos; renomeá-los não evita o aviso, mas alterar sua formatação pode fazer com que sejam considerados novos. Conferências anteriores à inclusão desse recurso continuam disponíveis, mas não participam da identificação de repetições.
+
 ## Arquitetura
 
 | Diretório | Responsabilidade |
@@ -96,7 +102,7 @@ Os resultados e as configurações utilizadas são salvos; os arquivos originais
 
 A interface chama a API, que aciona os casos de uso. Eles coordenam as regras de negócio e a persistência por contratos implementados na infraestrutura. O domínio permanece independente do banco e da interface.
 
-A interface e esta documentação estão em pt-BR. As rotas e respostas da API permanecem em inglês; a interface trata as mensagens para o usuário.
+A interface, esta documentação e as mensagens da API estão em pt-BR. A API retorna os erros em `detail` e os diagnósticos de importação em `issues[].message`, prontos para exibição. Rotas, nomes de campos, situações e códigos técnicos permanecem em inglês; o frontend usa esses identificadores para controlar o fluxo e apresentar os rótulos da interface.
 
 ## Desenvolvimento
 

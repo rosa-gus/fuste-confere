@@ -6,7 +6,7 @@ internal static class ImportSchemaMigrationChecks
 {
     // Keep the v1 definition frozen: this exercises upgrade of an installed
     // database rather than creation of a database using the latest schema.
-    private const string VersionOneSchema = """
+    internal const string VersionOneSchema = """
         CREATE TABLE companies (
             id TEXT NOT NULL PRIMARY KEY,
             name TEXT NOT NULL CHECK(length(trim(name)) BETWEEN 1 AND 160),
@@ -88,7 +88,7 @@ internal static class ImportSchemaMigrationChecks
         await verify.OpenAsync();
         using var version = verify.CreateCommand();
         version.CommandText = "PRAGMA user_version;";
-        Check(Convert.ToInt64(await version.ExecuteScalarAsync()) == 2, "Import-profile schema upgrade was not marked v2.");
+        Check(Convert.ToInt64(await version.ExecuteScalarAsync()) == 3, "Import schema upgrade was not marked v3.");
         using var foreignKeys = verify.CreateCommand();
         foreignKeys.CommandText = "SELECT COUNT(*) FROM pragma_foreign_key_check;";
         Check(Convert.ToInt64(await foreignKeys.ExecuteScalarAsync()) == 0, "Migration left invalid foreign keys.");
@@ -130,7 +130,7 @@ internal static class ImportSchemaMigrationChecks
         await verify.ExecuteNonQueryAsync();
         await repository.InitializeAsync();
         verify.CommandText = "PRAGMA user_version;";
-        Check(Convert.ToInt64(await verify.ExecuteScalarAsync()) == 2, "Migration could not retry after rollback.");
+        Check(Convert.ToInt64(await verify.ExecuteScalarAsync()) == 3, "Migration could not retry after rollback.");
     }
 
     private static void Check(bool condition, string message)

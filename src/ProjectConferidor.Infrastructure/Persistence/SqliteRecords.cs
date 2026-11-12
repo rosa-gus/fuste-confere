@@ -30,10 +30,14 @@ internal static class SqliteRecords
     public static async Task InsertReconciliationAsync(SqliteConnection connection, SqliteTransaction transaction, CommissionReconciliation reconciliation, CancellationToken cancellationToken)
     {
         using (var header = connection.CreateCommand(
-            "INSERT INTO reconciliations(id, company_id, created_at, created_at_ticks, import_configuration_json) VALUES ($id, $companyId, $createdAt, $ticks, $configuration);", transaction,
+            "INSERT INTO reconciliations(id, company_id, created_at, created_at_ticks, import_configuration_json, import_fingerprint, request_id, request_intent, reprocessed_from_id) VALUES ($id, $companyId, $createdAt, $ticks, $configuration, $fingerprint, $requestId, $intent, $origin);", transaction,
             ("$id", reconciliation.Id.ToString("D")), ("$companyId", reconciliation.CompanyId.ToString("D")),
             ("$createdAt", reconciliation.CreatedAt.ToString("O", CultureInfo.InvariantCulture)), ("$ticks", reconciliation.CreatedAt.UtcTicks),
-            ("$configuration", reconciliation.ImportConfiguration is null ? DBNull.Value : ImportConfigurationStorage.Serialize(reconciliation.ImportConfiguration))))
+            ("$configuration", reconciliation.ImportConfiguration is null ? DBNull.Value : ImportConfigurationStorage.Serialize(reconciliation.ImportConfiguration)),
+            ("$fingerprint", (object?)reconciliation.ImportFingerprint ?? DBNull.Value),
+            ("$requestId", (object?)reconciliation.RequestId?.ToString("D") ?? DBNull.Value),
+            ("$intent", (object?)reconciliation.RequestIntent ?? DBNull.Value),
+            ("$origin", (object?)reconciliation.ReprocessedFromId?.ToString("D") ?? DBNull.Value)))
         {
             await header.ExecuteNonQueryAsync(cancellationToken);
         }

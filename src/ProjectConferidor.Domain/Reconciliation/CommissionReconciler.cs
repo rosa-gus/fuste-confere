@@ -102,7 +102,7 @@ public static class CommissionReconciler
             // rejected as validation rather than overflowing decimal.Sum.
             if (entry.CommissionAmount > MonetaryLimits.MaximumAmount - total)
             {
-                throw new ArgumentException($"Reported commission total for sale ID {entries.Key} must not exceed {MonetaryLimits.MaximumAmountText}.");
+                throw new ArgumentException($"A soma das comissões informadas para a venda {entries.Key} deve ser de, no máximo, {MonetaryLimits.MaximumAmountDisplay}.");
             }
             total += entry.CommissionAmount;
         }

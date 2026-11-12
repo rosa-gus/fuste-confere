@@ -9,17 +9,17 @@ public sealed record Sale(string ExternalId, DateOnly Date, decimal GrossAmount)
         var normalizedId = externalId.Trim();
         if (normalizedId.Length is 0 or > 120)
         {
-            throw new ArgumentException("Sale ID must contain between 1 and 120 characters.", nameof(externalId));
+            throw new ArgumentException("O identificador da venda deve ter até 120 caracteres.");
         }
 
         if (grossAmount < 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(grossAmount), "Gross sale amount cannot be negative.");
+            throw new ArgumentOutOfRangeException(null, "O valor bruto da venda não pode ser negativo.");
         }
 
         if (grossAmount > MonetaryLimits.MaximumAmount)
         {
-            throw new ArgumentOutOfRangeException(nameof(grossAmount), $"Gross sale amount must not exceed {MonetaryLimits.MaximumAmountText}.");
+            throw new ArgumentOutOfRangeException(null, $"O valor bruto da venda deve ser de, no máximo, {MonetaryLimits.MaximumAmountDisplay}.");
         }
 
         return new Sale(normalizedId, date, grossAmount);

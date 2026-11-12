@@ -4,6 +4,7 @@ using ProjectConferidor.Application.Abstractions;
 using ProjectConferidor.Domain.Agreements;
 using ProjectConferidor.Domain.Companies;
 using ProjectConferidor.Domain.Reconciliation;
+using ProjectConferidor.Application.Reconciliation;
 
 namespace ProjectConferidor.Infrastructure.Persistence;
 
@@ -51,7 +52,7 @@ public sealed partial class SqliteConferidorRepository : ICompanyRepository, IAg
         }
         catch (SqliteException exception) when (exception.SqliteExtendedErrorCode == 2067)
         {
-            throw new RepositoryConflictException("A company with this name already exists.", exception);
+            throw new RepositoryConflictException("Já existe uma representada com esse nome.", exception);
         }
     }
 
@@ -83,11 +84,11 @@ public sealed partial class SqliteConferidorRepository : ICompanyRepository, IAg
         }
         catch (SqliteException exception) when (exception.SqliteExtendedErrorCode == 787)
         {
-            throw new KeyNotFoundException("Company not found.", exception);
+            throw new KeyNotFoundException("Representada não encontrada.", exception);
         }
         catch (SqliteException exception) when (exception.SqliteExtendedErrorCode == 2067)
         {
-            throw new RepositoryConflictException("An agreement already exists for this effective date.", exception);
+            throw new RepositoryConflictException("Já existe um acordo com essa data de início.", exception);
         }
     }
 
@@ -112,7 +113,7 @@ public sealed partial class SqliteConferidorRepository : ICompanyRepository, IAg
         }
         catch (SqliteException exception) when (exception.SqliteExtendedErrorCode == 787)
         {
-            throw new KeyNotFoundException("Company not found.", exception);
+            throw new KeyNotFoundException("Representada não encontrada.", exception);
         }
     }
 
@@ -131,17 +132,23 @@ public sealed partial class SqliteConferidorRepository : ICompanyRepository, IAg
     private async Task<IReadOnlyList<CommissionReconciliation>> ReadReconciliationsAsync(Guid id, bool byCompany, CancellationToken cancellationToken)
     {
         await using var connection = await _database.OpenConnectionAsync(cancellationToken);
+        return await ReadReconciliationsAsync(connection, null, id, byCompany, cancellationToken);
+    }
+
+    private static async Task<IReadOnlyList<CommissionReconciliation>> ReadReconciliationsAsync(
+        SqliteConnection connection, SqliteTransaction? transaction, Guid id, bool byCompany, CancellationToken cancellationToken)
+    {
         // Both predicates are fixed SQL. Only the UUID is supplied by the caller.
         var predicate = byCompany ? "r.company_id = $id" : "r.id = $id";
         using var command = connection.CreateCommand($"""
             SELECT r.id, r.company_id, r.created_at, l.position, l.sale_external_id, l.status,
                 l.sale_date, l.gross_amount, l.agreement_id, l.commission_percentage,
-                l.expected_commission, l.reported_commission, l.difference, r.import_configuration_json
+                l.expected_commission, l.reported_commission, l.difference, r.import_configuration_json, r.import_fingerprint, r.request_id, r.request_intent, r.reprocessed_from_id
             FROM reconciliations r
             LEFT JOIN reconciliation_lines l ON l.reconciliation_id = r.id
             WHERE {predicate}
             ORDER BY r.created_at_ticks DESC, r.rowid, l.position;
-            """, null, ("$id", id.ToString("D")));
+            """, transaction, ("$id", id.ToString("D")));
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         var reconciliations = new List<CommissionReconciliation>();
         CommissionReconciliation? current = null;
@@ -152,7 +159,13 @@ public sealed partial class SqliteConferidorRepository : ICompanyRepository, IAg
             {
                 current = new CommissionReconciliation(reconciliationId, Guid.Parse(reader.GetString(1)),
                     DateTimeOffset.Parse(reader.GetString(2), CultureInfo.InvariantCulture), [])
-                    { ImportConfiguration = reader.IsDBNull(13) ? null : ImportConfigurationStorage.Deserialize(reader.GetString(13)) };
+                    {
+                        ImportConfiguration = reader.IsDBNull(13) ? null : ImportConfigurationStorage.Deserialize(reader.GetString(13)),
+                        ImportFingerprint = reader.IsDBNull(14) ? null : reader.GetString(14),
+                        RequestId = reader.IsDBNull(15) ? null : Guid.Parse(reader.GetString(15)),
+                        RequestIntent = reader.IsDBNull(16) ? null : reader.GetString(16),
+                        ReprocessedFromId = reader.IsDBNull(17) ? null : Guid.Parse(reader.GetString(17))
+                    };
                 reconciliations.Add(current);
             }
             if (!reader.IsDBNull(3))

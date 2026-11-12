@@ -14,39 +14,7 @@ function loadModule(path) {
   return exports;
 }
 
-const { explainApiError } = loadModule("../src/format.ts");
 const { parseMoneyFilter, validateResultFilters, filterResultLines, paginateResultLines } = loadModule("../src/reconciliation-results.ts");
-const normalizeSpaces = (text) => text.replace(/[\u00a0\u202f]/g, " ");
-
-test("statement CSV errors retain specific Portuguese explanations", () => {
-  for (const [input, expected] of [
-    ["The statement file is empty.", "O arquivo de comissões está vazio."],
-    ["The statement file has no header row.", "O arquivo de comissões não contém cabeçalho."],
-    ["The statement file is invalid: unclosed quotation mark.", "O arquivo de comissões tem aspas sem fechamento."],
-    ["The statement file has 3 columns at row 2; expected 2.", "O arquivo de comissões tem 3 colunas na linha 2; eram esperadas 2."],
-  ]) {
-    assert.equal(explainApiError(input), expected);
-  }
-});
-
-test("numeric limits, aggregate errors and overflow are explained in Portuguese", () => {
-  for (const [input, expected] of [
-    ["Sales: gross amount must not exceed 999999999999.99 at row 2.", "Vendas: o valor bruto deve ser de, no máximo, R$ 999.999.999.999,99 na linha 2."],
-    ["Statement: commission amount must not exceed 999999999999.99 at row 7.", "Comissões: a comissão deve ser de, no máximo, R$ 999.999.999.999,99 na linha 7."],
-    ["Gross sale amount must not exceed 999999999999.99.\n(Parameter 'grossAmount')", "O valor bruto da venda deve ser de, no máximo, R$ 999.999.999.999,99."],
-    ["Reported commission must not exceed 999999999999.99.", "A comissão informada deve ser de, no máximo, R$ 999.999.999.999,99."],
-    ["Reported commission total for sale ID VEN-001 must not exceed 999999999999.99.", "A soma das comissões informadas para a venda VEN-001 deve ser de, no máximo, R$ 999.999.999.999,99."],
-    ["The reconciliation exceeds the supported numeric range.", "Não foi possível calcular a conferência: os valores excedem o limite numérico suportado."],
-  ]) {
-    assert.equal(normalizeSpaces(explainApiError(input)), expected);
-  }
-});
-
-test("several CSV validation errors retain their individual row numbers", () => {
-  assert.equal(explainApiError("Sales: invalid gross amount at row 2.\nStatement: invalid commission amount at row 5."),
-    "Vendas: o valor bruto é inválido na linha 2. Comissões: o valor da comissão é inválido na linha 5.");
-});
-
 test("money filters accept supported notation and reject malformed or unsafe numbers", () => {
   for (const [input, value] of [["1.234,56", 1234.56], ["R$ 1.234,56", 1234.56], ["1234.56", 1234.56], ["-0,01", -0.01], ["0", 0]]) {
     assert.equal(parseMoneyFilter(input), value);

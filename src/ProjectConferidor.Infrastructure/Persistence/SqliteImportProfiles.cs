@@ -42,9 +42,9 @@ public sealed partial class SqliteConferidorRepository
             ("$updatedAt", profile.UpdatedAt.ToString("O", CultureInfo.InvariantCulture)));
         try { await command.ExecuteNonQueryAsync(cancellationToken); }
         catch (SqliteException exception) when (exception.SqliteExtendedErrorCode == 787)
-        { throw new KeyNotFoundException("Company not found.", exception); }
+        { throw new KeyNotFoundException("Representada não encontrada.", exception); }
         catch (SqliteException exception) when (exception.SqliteExtendedErrorCode == 2067)
-        { throw new RepositoryConflictException("An import profile with this name already exists.", exception); }
+        { throw new RepositoryConflictException("Já existe um perfil de importação com esse nome.", exception); }
     }
 
     public async Task<bool> UpdateAsync(ImportProfile profile, int expectedRevision, CancellationToken cancellationToken)
@@ -63,7 +63,7 @@ public sealed partial class SqliteConferidorRepository
             ("$updatedAt", profile.UpdatedAt.ToString("O", CultureInfo.InvariantCulture)));
         try { return await command.ExecuteNonQueryAsync(cancellationToken) > 0; }
         catch (SqliteException exception) when (exception.SqliteExtendedErrorCode == 2067)
-        { throw new RepositoryConflictException("An import profile with this name already exists.", exception); }
+        { throw new RepositoryConflictException("Já existe um perfil de importação com esse nome.", exception); }
     }
 
     public Task<bool> DeleteImportProfileAsync(Guid companyId, Guid id, CancellationToken cancellationToken) =>

@@ -5,11 +5,11 @@
   import ToastRegion from "./components/ToastRegion.svelte";
   import OptionsMenu from "./components/OptionsMenu.svelte";
   import DeleteCompanyDialog from "./components/DeleteCompanyDialog.svelte";
+  import DuplicateImportDialog from "./components/DuplicateImportDialog.svelte";
   import DeleteHistoryDialog from "./components/DeleteHistoryDialog.svelte";
   import HistoryActions from "./components/HistoryActions.svelte";
   import ReconciliationResults from "./components/ReconciliationResults.svelte";
   import { getApiSettings } from "./api-settings";
-  import { getImportIssueMessage } from "./csv-import";
   import {
     Button,
     Divider,
@@ -37,7 +37,6 @@
   import { api, ApiError } from "./api";
   import packageJson from "../package.json";
   import {
-    explainApiError,
     formatDate,
     formatDateTime,
     formatPercentage,
@@ -81,7 +80,53 @@
   let importValidated = $state(false);
   let importSetupBusy = $state(false);
   let importExecutionError = $state("");
+  let duplicateImport = $state<{ id: string; createdAt: string } | null>(null);
+  let openingDuplicate = $state(false);
+  let importAttempt: { requestId: string; reprocessOf?: string } | null = null;
   let importConfigurationRevision = 0;
+
+  function resetImportAttempt(): void {
+    duplicateImport = null;
+    importAttempt = null;
+  }
+
+  function closeDuplicateImport(): void {
+    if (reconciling || openingDuplicate) return;
+    resetImportAttempt();
+    errorMessage = "";
+  }
+
+  async function openPreviousImport(): Promise<void> {
+    if (!duplicateImport || reconciling || openingDuplicate) return;
+    const previous = duplicateImport;
+    const companyId = selectedCompanyId;
+    const revision = workspaceRequestId;
+    openingDuplicate = true;
+    errorMessage = "";
+    try {
+      const result = await api.getReconciliation(previous.id);
+      if (selectedCompanyId !== companyId || workspaceRequestId !== revision || duplicateImport !== previous) return;
+      reconciliationRequestId++;
+      reconciliations = [result, ...reconciliations.filter((item) => item.id !== result.id)];
+      activeReconciliation = result;
+      resetImportAttempt();
+    } catch (error) {
+      if (selectedCompanyId === companyId && workspaceRequestId === revision && duplicateImport === previous) {
+        showError(error);
+        if (error instanceof ApiError && error.status === 404) resetImportAttempt();
+      }
+    } finally {
+      openingDuplicate = false;
+    }
+  }
+
+  async function confirmReimport(): Promise<void> {
+    if (!duplicateImport || reconciling || openingDuplicate) return;
+    const origin = duplicateImport.id;
+    if (importAttempt?.reprocessOf !== origin)
+      importAttempt = { requestId: crypto.randomUUID(), reprocessOf: origin };
+    await createReconciliation({ preventDefault() {} } as SubmitEvent);
+  }
   type UploadKind = "sales" | "statement";
   let draggingFileKind = $state<UploadKind | null>(null);
   const fileDragDepth: Record<UploadKind, number> = { sales: 0, statement: 0 };
@@ -146,6 +191,7 @@
     const requestId = ++workspaceRequestId;
     const isCurrent = () => selectedCompanyId === companyId && workspaceRequestId === requestId;
     clearFileDrag();
+    resetImportAttempt();
     importConfiguration = null;
     importValidated = false;
     importSetupBusy = false;
@@ -293,6 +339,8 @@
     const submittedStatement = statementFile;
     const requestId = workspaceRequestId;
     const configurationRevision = importConfigurationRevision;
+    if (!importAttempt) importAttempt = { requestId: crypto.randomUUID() };
+    const attempt = importAttempt;
     const submittedConfiguration = importConfiguration ? JSON.parse(JSON.stringify(importConfiguration)) as ImportConfiguration : null;
     const isCurrent = () => selectedCompanyId === companyId && workspaceRequestId === requestId && importConfigurationRevision === configurationRevision;
 
@@ -312,10 +360,12 @@
         submittedSales,
         submittedStatement,
         submittedConfiguration,
+        attempt,
       );
       if (!isCurrent()) return;
       reconciliationRequestId++;
-      reconciliations = [reconciliation, ...reconciliations];
+      reconciliations = [reconciliation, ...reconciliations.filter((item) => item.id !== reconciliation.id)];
+      if (importAttempt === attempt) resetImportAttempt();
       activeReconciliation = reconciliation;
       successMessage = "Conferência concluída e salva no histórico.";
       // A user may prepare another CSV while this request is in flight.
@@ -328,7 +378,17 @@
         resetFileInput("statement-file");
       }
     } catch (error) {
-      if (isCurrent()) {
+      if (isCurrent() && importAttempt === attempt) {
+        if (error instanceof ApiError && error.problem?.code === "duplicate_import" && error.problem.existingReconciliation) {
+          if (salesFile === submittedSales && statementFile === submittedStatement) {
+            duplicateImport = error.problem.existingReconciliation;
+            errorMessage = "";
+          }
+          return;
+        }
+        // A failed connection may conceal a successful write: retain its request ID.
+        if (error instanceof ApiError && ["invalid_reprocess_reference", "request_id_conflict"].includes(error.problem?.code ?? ""))
+          resetImportAttempt();
         showError(error);
         importExecutionError = errorMessage;
         if (error instanceof ApiError && error.problem?.issues?.length) {
@@ -336,7 +396,7 @@
             const source = issue.sourceKind === "sales" ? "Vendas" : issue.sourceKind === "statement" ? "Demonstrativo" : "Configuração";
             const row = issue.row !== null ? `, linha ${issue.row}` : "";
             const column = issue.column ? `, coluna “${issue.column}”` : "";
-            return `${source}${row}${column}: ${getImportIssueMessage(issue)}`;
+            return `${source}${row}${column}: ${issue.message}`;
           }).join("\n");
           errorMessage = "Os arquivos apresentam problemas. Confira o diagnóstico na área de importação.";
         }
@@ -361,6 +421,7 @@
   }
 
   function handleImportConfigurationChange(configuration: ImportConfiguration | null): void {
+    resetImportAttempt();
     importConfiguration = configuration;
     importConfigurationRevision++;
     importValidated = false;
@@ -374,7 +435,7 @@
 
   function showError(error: unknown): void {
     if (error instanceof ApiError) {
-      errorMessage = explainApiError(error.message);
+      errorMessage = error.message;
     } else {
       errorMessage = "Ocorreu um erro inesperado. Tente novamente.";
     }
@@ -398,6 +459,7 @@
       errorMessage = "Os dois arquivos devem ter, juntos, no máximo 9 MB.";
       return false;
     }
+    resetImportAttempt();
     importValidated = false;
     importExecutionError = "";
     if (kind === "sales") salesFile = file;
@@ -972,6 +1034,14 @@
     {/if}
   </main>
 
+  <DuplicateImportDialog
+    previous={duplicateImport}
+    busy={reconciling || openingDuplicate}
+    error={errorMessage}
+    onClose={closeDuplicateImport}
+    onOpenPrevious={() => void openPreviousImport()}
+    onReprocess={() => void confirmReimport()}
+  />
   <DeleteCompanyDialog
     company={companyToDelete}
     onClose={() => (companyToDelete = null)}

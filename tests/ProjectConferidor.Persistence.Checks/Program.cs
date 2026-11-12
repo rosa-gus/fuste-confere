@@ -22,6 +22,7 @@ try
   await ImportProfilePersistenceChecks.RunAsync(Path.Combine(work, "import-profiles"));
   await CsvAmountChecks.RunAsync(Path.Combine(work, "csv-validation"));
   await ReconciliationValidationChecks.RunAsync(Path.Combine(work, "financial-validation"));
+  await ReimportChecks.RunAsync(Path.Combine(work, "reimports"));
   var json = new JsonSerializerOptions { WriteIndented = true };
   json.Converters.Add(new JsonStringEnumConverter());
   void Check(bool value, string message) { if (!value) throw new Exception(message); }
@@ -76,7 +77,7 @@ try
   Check((await repo.FindReconciliationAsync(result.Id, default))!.Lines.Count == 53, "Showcase output count");
   Check((await repo.FindReconciliationAsync(result.Id, default))!.Lines.Sum(l => l.ExpectedCommission ?? 0) == 28662.86m, "Financial total changed");
   Check((await repo.FindReconciliationAsync(result.Id, default))!.Lines.Sum(l => l.Difference ?? 0) == 307.18m, "Difference total changed");
-  Check(await Scalar(migrationDir, "PRAGMA user_version;") == 2, "Schema version");
+  Check(await Scalar(migrationDir, "PRAGMA user_version;") == 3, "Schema version");
   Check(await Scalar(migrationDir, "SELECT COUNT(*) FROM reconciliation_lines WHERE typeof(gross_amount)='real' OR typeof(expected_commission)='real';") == 0, "Money stored as floating point");
   Check(await Scalar(migrationDir, "SELECT COUNT(*) FROM pragma_foreign_key_check;") == 0, "Foreign key violation");
   Check(await repo.DeleteAgreementAsync(other.Id, agreements[0].Id, default) == false, "Wrong-company agreement deletion");
@@ -113,9 +114,9 @@ try
   await File.WriteAllTextAsync(failPath, source);
   await failed.InitializeAsync();
   Check((await failed.ListAsync(default)).Count == 2, "Migration retry failed");
-  await Execute(failDir, "PRAGMA user_version=3;");
+  await Execute(failDir, "PRAGMA user_version=4;");
   await Expect<InvalidDataException>(() => new SqliteConferidorRepository(failDir).InitializeAsync());
-  Check(await Scalar(failDir, "PRAGMA user_version;") == 3, "Future schema overwritten");
+  Check(await Scalar(failDir, "PRAGMA user_version;") == 4, "Future schema overwritten");
   var unknownDir = Dir("unknown");
   await Execute(unknownDir, "CREATE TABLE unrelated (id INTEGER PRIMARY KEY);");
   await Expect<InvalidDataException>(() => new SqliteConferidorRepository(unknownDir).InitializeAsync());
@@ -182,7 +183,7 @@ try
   {
     Check(await Scalar(resetDir, $"SELECT COUNT(*) FROM {table};") == 0, $"Reset left records in {table}");
   }
-  Check(await Scalar(resetDir, "PRAGMA user_version;") == 2, "Reset removed migration marker");
+  Check(await Scalar(resetDir, "PRAGMA user_version;") == 3, "Reset removed migration marker");
   Check(await File.ReadAllTextAsync(resetSourcePath) == source, "Reset changed legacy snapshot");
   var afterReset = new SqliteConferidorRepository(resetDir);
   Check((await afterReset.ListAsync(default)).Count == 0, "Restart after reset reimported JSON");

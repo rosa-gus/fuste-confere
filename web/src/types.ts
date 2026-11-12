@@ -36,6 +36,7 @@ export interface Reconciliation {
   createdAt: string;
   lines: ReconciliationLine[];
   importConfiguration?: ImportConfiguration | null;
+  reprocessedFromId?: string | null;
 }
 
 export type HistoryDeletionTarget =
@@ -43,6 +44,8 @@ export type HistoryDeletionTarget =
   | { kind: "reconciliation"; reconciliation: Reconciliation };
 
 export interface ProblemDetails {
+  code?: string;
+  existingReconciliation?: { id: string; createdAt: string };
   title?: string;
   detail?: string;
   status?: number;

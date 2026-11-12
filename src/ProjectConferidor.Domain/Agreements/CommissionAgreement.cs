@@ -10,12 +10,12 @@ public sealed record CommissionAgreement(
     {
         if (companyId == Guid.Empty)
         {
-            throw new ArgumentException("Company is required.", nameof(companyId));
+            throw new ArgumentException("Informe a representada.");
         }
 
         if (percentage is < 0 or > 100)
         {
-            throw new ArgumentOutOfRangeException(nameof(percentage), "Percentage must be between 0 and 100.");
+            throw new ArgumentOutOfRangeException(null, "O percentual deve estar entre 0 e 100.");
         }
 
         return new CommissionAgreement(Guid.NewGuid(), companyId, effectiveFrom, percentage);

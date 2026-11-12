@@ -2,7 +2,7 @@
   import ToastRegion from "./ToastRegion.svelte";
   import { Divider, ToastNotification, Modal } from "carbon-components-svelte";
   import { api, ApiError } from "../api";
-  import { explainApiError, formatDate, formatDateTime, formatPercentage } from "../format";
+  import { formatDate, formatDateTime, formatPercentage } from "../format";
   import type { HistoryDeletionTarget } from "../types";
 
   let { target, onClose, onDeleted }: {
@@ -39,7 +39,7 @@
       }
     } catch (error) {
       errorMessage = error instanceof ApiError
-        ? explainApiError(error.message)
+        ? error.message
         : "Não foi possível excluir o registro. Tente novamente.";
       return;
     } finally {
@@ -54,6 +54,7 @@
   size="sm"
   danger
   alert
+  modalLabel={agreement ? "Acordos de comissão" : "Histórico de conferências"}
   modalHeading={agreement ? "Excluir acordo?" : "Excluir conferência?"}
   iconDescription="Fechar confirmação de exclusão"
   primaryButtonText={agreement ? "Excluir acordo" : "Excluir conferência"}

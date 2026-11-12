@@ -3,7 +3,6 @@
   import { ToastNotification, Modal, TextInput } from "carbon-components-svelte";
   import { api, ApiError } from "../api";
   import { getApiBaseUrl } from "../api-settings";
-  import { explainApiError } from "../format";
 
   let { apiUrl, onClose }: {
     apiUrl: string;
@@ -34,7 +33,7 @@
       await api.resetDatabase();
     } catch (error) {
       errorMessage = error instanceof ApiError
-        ? explainApiError(error.message)
+        ? error.message
         : "Não foi possível redefinir o banco de dados. Tente novamente.";
       resetting = false;
       return;
@@ -49,6 +48,7 @@
   size="sm"
   danger
   hasForm
+  modalLabel="Dados da aplicação"
   modalHeading="Redefinir banco de dados?"
   iconDescription="Fechar confirmação de redefinição"
   primaryButtonText="Redefinir banco de dados"

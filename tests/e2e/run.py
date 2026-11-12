@@ -6,6 +6,7 @@ Uses only the Python standard library. Never connects to an existing API.
 """
 import argparse
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 from decimal import Decimal
 import json
 import os
@@ -70,7 +71,7 @@ class Api:
                 self.process.kill()
                 self.process.wait(timeout=5)
 
-    def request(self, method, path, value=None, files=None, status=200, raw=False):
+    def request(self, method, path, value=None, files=None, status=200, raw=False, fields=None, raw_body=None, content_type="application/json"):
         headers = {}
         data = None
         if files is not None:
@@ -84,18 +85,24 @@ class Api:
                 parts.append((f'--{boundary}\r\nContent-Disposition: form-data; '
                               'name="configuration"\r\n\r\n').encode()
                              + json.dumps(value).encode() + b"\r\n")
+            for name, content in (fields or {}).items():
+                parts.append((f'--{boundary}\r\nContent-Disposition: form-data; name="{name}"\r\n\r\n'
+                              f'{content}\r\n').encode())
             data = b"".join(parts) + f"--{boundary}--\r\n".encode()
             headers["Content-Type"] = f"multipart/form-data; boundary={boundary}"
         elif value is not None:
             data = json.dumps(value).encode()
             headers["Content-Type"] = "application/json"
+        if raw_body is not None:
+            data = raw_body
+            headers["Content-Type"] = content_type
         try:
             response = urlopen(Request(self.base + path, data=data, headers=headers, method=method), timeout=10)
         except HTTPError as error:
             response = error
         with response:
             body = response.read()
-            check(response.status == status,
+            check(response.status in (status if isinstance(status, tuple) else (status,)),
                   f"{method} {path}: expected HTTP {status}, got {response.status}: {body[:1000]!r}")
         return body if raw else json.loads(body, parse_float=Decimal) if body else None
 
@@ -153,8 +160,8 @@ def run(api, passed):
               f"Wrong configured line: {sale}")
     done("mapped preview without writes, reusable profile, mixed formats and leading-zero IDs")
 
-    for name, marker in [("duplicate-sales.csv", "duplicate"), ("invalid-date-sales.csv", "date"),
-                         ("invalid-amount-sales.csv", "amount")]:
+    for name, marker in [("duplicate-sales.csv", "repete o identificador"), ("invalid-date-sales.csv", "data da venda é inválida"),
+                         ("invalid-amount-sales.csv", "valor bruto é inválido")]:
         failure = api.request("POST", path + "/reconciliations",
                               files={"sales": FIXTURES / name, "statement": FIXTURES / "statement.csv"}, status=400)
         check(marker in failure["detail"].lower(), f"Unexpected validation error: {name}")
@@ -178,6 +185,99 @@ def run(api, passed):
     check(api.request("GET", path + "/import-profiles") == profiles, "Profiles changed after restart")
     check(len(api.request("GET", path + "/reconciliations")) == 2, "History changed after restart")
     done("company isolation and exact history/profile preservation after API restart")
+
+    # Reimport contract exercised over real HTTP, independently of baseline history.
+    repeated_company = api.request("POST", "/api/companies", {"name": "E2E Reimports"})
+    repeated_path = f'/api/companies/{repeated_company["id"]}'
+    agreement = api.request("POST", repeated_path + "/agreements", {"effectiveFrom": "2026-03-01", "percentage": 5})
+    files = {"sales": ROOT / "samples/sales.csv", "statement": ROOT / "samples/statement.csv"}
+    initial_fields = {"requestId": str(uuid.uuid4())}
+    initial = api.request("POST", repeated_path + "/reconciliations", files=files, fields=initial_fields)
+    check(api.request("POST", repeated_path + "/reconciliations", files=files, fields=initial_fields) == initial,
+          "Repeated HTTP request did not return its original result")
+    conflict = api.request("POST", repeated_path + "/reconciliations", files=files, status=409)
+    check(conflict["code"] == "duplicate_import" and conflict["existingReconciliation"]["id"] == initial["id"],
+          "Duplicate HTTP response lacks previous reconciliation")
+    check(len(api.request("GET", repeated_path + "/reconciliations")) == 1, "Conflict saved extra history")
+    with tempfile.TemporaryDirectory(prefix="conferidor-e2e-size-") as oversized_dir:
+        oversized = Path(oversized_dir) / "oversized.csv"
+        oversized.write_bytes(b"x" * (9 * 1024 * 1024 + 1))
+        api.request("POST", repeated_path + "/reconciliations",
+                    files={"sales": oversized, "statement": files["statement"]}, status=413)
+    check(len(api.request("GET", repeated_path + "/reconciliations")) == 1, "Oversized upload wrote history")
+    for field in ["requestId", "reprocessOf"]:
+        api.request("POST", repeated_path + "/reconciliations", files=files, fields={field: "invalid"}, status=400)
+    api.request("POST", repeated_path + "/reconciliations", files=files,
+                fields={"reprocessOf": result["id"]}, status=409)
+    api.request("DELETE", repeated_path + f'/agreements/{agreement["id"]}', status=204)
+    api.request("POST", repeated_path + "/agreements", {"effectiveFrom": "2026-03-01", "percentage": 6})
+    api.request("POST", repeated_path + "/reconciliations", files=files, status=409)
+    fields = {"requestId": str(uuid.uuid4()), "reprocessOf": initial["id"]}
+    repeated = api.request("POST", repeated_path + "/reconciliations", files=files, fields=fields)
+    check(repeated["id"] != initial["id"] and repeated["reprocessedFromId"] == initial["id"], "Missing reprocess origin")
+    check(next(line for line in repeated["lines"] if line["saleExternalId"] == "VEN-001")["expectedCommission"] == 600,
+          "Reprocessing did not use changed agreements")
+    check(api.request("GET", f'/api/reconciliations/{initial["id"]}') == initial, "Reprocessing changed prior result")
+    api.stop()
+    api.start()
+    check(api.request("POST", repeated_path + "/reconciliations", files=files, fields=fields) == repeated,
+          "Confirmed retry after restart created another result")
+    mismatch = api.request("POST", repeated_path + "/reconciliations", files=files,
+                           fields={"requestId": fields["requestId"]}, status=409)
+    check(mismatch["code"] == "request_id_conflict", "Intent mismatch accepted over HTTP")
+    api.request("DELETE", repeated_path + f'/reconciliations/{initial["id"]}', status=204)
+    retry_after_delete = api.request("POST", repeated_path + "/reconciliations", files=files, fields=fields)
+    check(retry_after_delete["id"] == repeated["id"] and retry_after_delete["reprocessedFromId"] is None,
+          "Origin deletion broke idempotent retry")
+    api.request("POST", repeated_path + "/reconciliations", files=files,
+                fields={"requestId": str(uuid.uuid4()), "reprocessOf": initial["id"]}, status=409)
+    done("reimport HTTP contract, explicit confirmation, changed agreements and retry after restart/deletion")
+
+    concurrent_company = api.request("POST", "/api/companies", {"name": "E2E Concurrent reimports"})
+    concurrent_path = f'/api/companies/{concurrent_company["id"]}/reconciliations'
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        responses = list(executor.map(lambda _: api.request("POST", concurrent_path, files=files, status=(200, 409)), range(4)))
+    check(sum("id" in response for response in responses) == 1
+          and sum(response.get("code") == "duplicate_import" for response in responses) == 3,
+          "Concurrent HTTP imports created duplicate results")
+    origin = next(response["id"] for response in responses if "id" in response)
+    concurrent_fields = {"requestId": str(uuid.uuid4()), "reprocessOf": origin}
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        responses = list(executor.map(lambda _: api.request("POST", concurrent_path, files=files, fields=concurrent_fields), range(4)))
+    check(len({response["id"] for response in responses}) == 1 and len(api.request("GET", concurrent_path)) == 2,
+          "Concurrent confirmed HTTP retries created duplicate results")
+    done("concurrent normal imports and confirmed HTTP retries save only one result per intention")
+
+    # User-visible response text is localized by the API; technical field/code values stay stable.
+    invalid_company = api.request("POST", "/api/companies", {"name": ""}, status=400)
+    check(invalid_company["title"] == "Dados inválidos" and invalid_company["detail"] == "Informe o nome da representada.",
+          "Company validation was not localized")
+    invalid_agreement = api.request("POST", repeated_path + "/agreements",
+                                    {"effectiveFrom": "2026-01-01", "percentage": 101}, status=400)
+    check(invalid_agreement["detail"] == "O percentual deve estar entre 0 e 100.",
+          "Domain error leaked an English parameter suffix")
+    for body in [b"{", b'{"percentage":"invalid","effectiveFrom":"2026-01-01"}']:
+        malformed = api.request("POST", repeated_path + "/agreements", raw_body=body, status=400)
+        check(malformed["title"] == "Dados inválidos" and malformed["detail"].startswith("Confira os dados enviados."),
+              "Framework binding error was not localized")
+    unsupported = api.request("POST", "/api/companies", raw_body=b"text", content_type="text/plain", status=415)
+    check(unsupported["title"] == "Formato não suportado", "Unsupported media title was not localized")
+    for missing in [f"/api/reconciliations/{uuid.uuid4()}", "/api/unknown-resource"]:
+        not_found = api.request("GET", missing, status=404)
+        check(not_found["title"] == "Recurso não encontrado" and not_found["detail"] == "O recurso solicitado não foi encontrado.",
+              "Not-found response was not localized")
+    check(conflict["title"] == "Conflito na operação"
+          and conflict["detail"] == "Estes arquivos já foram conferidos para esta representada.",
+          "Reimport conflict message was not localized")
+    check(failure["issues"][0]["code"] == "missing_column"
+          and failure["issues"][0]["message"].startswith("A coluna configurada"),
+          "Configured import issue was not localized or technical code changed")
+    profile_error = api.request("POST", path + "/import-profiles", {"name": "", "configuration": configuration}, status=400)
+    check(profile_error["detail"] == "O nome do perfil de importação deve ter entre 1 e 160 caracteres.",
+          "Profile validation was not localized")
+    done("Portuguese API validation, structured CSV diagnostics, conflict titles and framework binding errors")
+
+
 
 
 def main():

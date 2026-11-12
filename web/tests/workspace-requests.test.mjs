@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -56,21 +57,20 @@ function application() {
     tick: async () => {},
     document: { getElementById: () => null },
     ApiError,
-    explainApiError: (message) => message,
-    getImportIssueMessage: importModule.getImportIssueMessage,
+    crypto: { randomUUID },
   });
   vm.runInContext(`${outputText}
     globalThis.handlers = {
       chooseCompany, createAgreement, createReconciliation, selectFile,
       dropFile, enterFileDrag, leaveFileDrag, overFileDrag, preventOutsideFileDrop,
-      handleImportConfigurationChange,
+      handleImportConfigurationChange, confirmReimport, openPreviousImport, closeDuplicateImport,
       setImportValidated: (value) => { importValidated = value; },
       setImportSetupBusy: (value) => { importSetupBusy = value; },
       dismissErrorToast: () => { errorMessage = ""; },
       read: () => ({ selectedCompanyId, agreements, reconciliations,
         activeReconciliation, salesFile, statementFile, successMessage,
         errorMessage, workspaceLoading, savingAgreement, reconciling, draggingFileKind,
-        importConfiguration, importConfigurationRevision, importValidated, importSetupBusy, importExecutionError })
+        importConfiguration, importConfigurationRevision, importValidated, importSetupBusy, importExecutionError, duplicateImport })
     };`, context);
   const handlers = context.handlers;
   return {
@@ -421,7 +421,7 @@ for (const outcome of ["success", "error"]) {
   });
 }
 
-test("structured configured-import errors remain translated after the toast is dismissed", async () => {
+test("structured configured-import errors preserve API messages after the toast is dismissed", async () => {
   const app = application();
   await app.choose("A");
   app.upload("invalid");
@@ -429,19 +429,168 @@ test("structured configured-import errors remain translated after the toast is d
   app.setImportValidated(true);
   app.api.createReconciliation = async () => {
     throw new ApiError("Import validation failed.", 400, { issues: [
-      { sourceKind: "sales", row: 22, column: "Total", field: "grossAmount", code: "invalid_amount", message: "The amount is invalid." },
-      { sourceKind: "statement", row: 3, column: "Pedido", field: "saleExternalId", code: "invalid_id", message: "Invalid sale ID." },
+      { sourceKind: "sales", row: 22, column: "Total", field: "grossAmount", code: "invalid_amount", message: "O valor não corresponde ao formato numérico selecionado." },
+      { sourceKind: "statement", row: 3, column: "Pedido", field: "saleExternalId", code: "invalid_id", message: "O identificador é obrigatório e deve ter até 120 caracteres." },
     ] });
   };
   await app.createReconciliation(submit);
   const diagnostic = app.read().importExecutionError;
   assert.match(diagnostic, /Vendas, linha 22, coluna “Total”/);
   assert.match(diagnostic, /Demonstrativo, linha 3, coluna “Pedido”/);
-  assert.doesNotMatch(diagnostic, /The amount is invalid|Invalid sale ID/);
+  assert.match(diagnostic, /O valor não corresponde ao formato numérico selecionado/);
+  assert.match(diagnostic, /O identificador é obrigatório/);
   assert.match(app.read().errorMessage, /diagnóstico/);
   app.dismissErrorToast();
   assert.equal(app.read().errorMessage, "");
   assert.equal(app.read().importExecutionError, diagnostic);
   assert.equal(app.read().salesFile.name, "invalid-sales.csv");
   assert.equal(app.read().reconciliations.length, 1);
+});
+
+const duplicateError = () => new ApiError("Already reconciled", 409, {
+  code: "duplicate_import", existingReconciliation: { id: "previous", createdAt: "2026-11-12T12:00:00Z" },
+});
+
+test("duplicate warning preserves uploads; opening previous reads without submitting again", async () => {
+  const app = application();
+  await app.choose("A");
+  app.upload("repeat");
+  let calls = 0;
+  app.api.createReconciliation = async () => { calls++; throw duplicateError(); };
+  await app.createReconciliation(submit);
+  assert.equal(app.read().duplicateImport.id, "previous");
+  assert.equal(app.read().errorMessage, "");
+  assert.equal(app.read().reconciliations.length, 1);
+  app.api.getReconciliation = async (id) => reconciliation("A", id);
+  await app.openPreviousImport();
+  assert.equal(calls, 1);
+  assert.equal(app.read().activeReconciliation.id, "previous");
+  assert.equal(app.read().salesFile.name, "repeat-sales.csv");
+  assert.equal(app.read().duplicateImport, null);
+});
+
+test("confirmation uses a fresh request ID and retains it across a network retry", async () => {
+  const app = application();
+  await app.choose("A");
+  app.upload("repeat");
+  const attempts = [];
+  app.api.createReconciliation = async (_company, _sales, _statement, _config, attempt) => {
+    attempts.push({ ...attempt });
+    if (attempts.length === 1) throw duplicateError();
+    if (attempts.length === 2) throw new ApiError("Não foi possível conectar ao Project Conferidor. Confira se a API está em execução.", 0);
+    return reconciliation("A", "reprocessed");
+  };
+  await app.createReconciliation(submit);
+  await app.confirmReimport();
+  assert.equal(app.read().duplicateImport.id, "previous");
+  assert.equal(app.read().salesFile.name, "repeat-sales.csv");
+  await app.confirmReimport();
+  assert.notEqual(attempts[0].requestId, attempts[1].requestId);
+  assert.equal(attempts[1].requestId, attempts[2].requestId);
+  assert.equal(attempts[1].reprocessOf, "previous");
+  assert.equal(app.read().duplicateImport, null);
+  assert.equal(app.read().salesFile, null);
+  assert.equal(app.read().activeReconciliation.id, "reprocessed");
+});
+
+test("normal network retries reuse request IDs and do not duplicate a known history entry", async () => {
+  const app = application();
+  await app.choose("A");
+  app.upload("repeat");
+  const attempts = [];
+  app.api.createReconciliation = async (_company, _sales, _statement, _config, attempt) => {
+    attempts.push(attempt.requestId);
+    if (attempts.length === 1) throw new ApiError("Não foi possível conectar ao Project Conferidor. Confira se a API está em execução.", 0);
+    return reconciliation("A", "history-A");
+  };
+  await app.createReconciliation(submit);
+  await app.createReconciliation(submit);
+  assert.equal(attempts[0], attempts[1]);
+  assert.equal(app.read().reconciliations.length, 1);
+});
+
+for (const change of ["company", "file", "configuration", "cancel"]) {
+  test(`${change} invalidates the duplicate confirmation`, async () => {
+    const app = application();
+    await app.choose("A");
+    app.upload("repeat");
+    let calls = 0;
+    app.api.createReconciliation = async () => { calls++; throw duplicateError(); };
+    await app.createReconciliation(submit);
+    if (change === "company") await app.choose("B");
+    if (change === "file") app.upload("replacement");
+    if (change === "configuration") app.handleImportConfigurationChange(importModule.createDefaultImportConfiguration());
+    if (change === "cancel") app.closeDuplicateImport();
+    assert.equal(app.read().duplicateImport, null);
+    await app.confirmReimport();
+    assert.equal(calls, 1);
+  });
+}
+
+for (const change of ["company", "file", "configuration"]) {
+  test(`late duplicate conflict cannot reopen the dialog after changing ${change}`, async () => {
+    const app = application();
+    await app.choose("A");
+    app.upload("repeat");
+    const pending = deferred();
+    app.api.createReconciliation = () => pending.promise;
+    const operation = app.createReconciliation(submit);
+    if (change === "company") await app.choose("B");
+    if (change === "file") app.upload("replacement");
+    if (change === "configuration") app.handleImportConfigurationChange(importModule.createDefaultImportConfiguration());
+    pending.reject(duplicateError());
+    await operation;
+    assert.equal(app.read().duplicateImport, null);
+    assert.equal(app.read().errorMessage, "");
+  });
+}
+
+test("deleted reprocess reference closes the warning and keeps uploads available", async () => {
+  const app = application();
+  await app.choose("A");
+  app.upload("repeat");
+  app.api.createReconciliation = async () => { throw duplicateError(); };
+  await app.createReconciliation(submit);
+  app.api.createReconciliation = async () => { throw new ApiError("Reference unavailable", 409, { code: "invalid_reprocess_reference" }); };
+  await app.confirmReimport();
+  assert.equal(app.read().duplicateImport, null);
+  assert.equal(app.read().salesFile.name, "repeat-sales.csv");
+  assert.notEqual(app.read().errorMessage, "");
+});
+
+for (const outcome of ["success", "error"]) {
+  test(`opening a previous result ignores late ${outcome} after a file change`, async () => {
+    const app = application();
+    await app.choose("A");
+    app.upload("repeat");
+    app.api.createReconciliation = async () => { throw duplicateError(); };
+    await app.createReconciliation(submit);
+    const pending = deferred();
+    app.api.getReconciliation = () => pending.promise;
+    const opening = app.openPreviousImport();
+    app.upload("new");
+    if (outcome === "success") pending.resolve(reconciliation("A", "previous"));
+    else pending.reject(new ApiError("Old result unavailable", 404));
+    await opening;
+    assert.equal(app.read().activeReconciliation.id, "history-A");
+    assert.equal(app.read().errorMessage, "");
+    assert.equal(app.read().salesFile.name, "new-sales.csv");
+  });
+}
+
+test("old confirmation errors cannot reset a new upload's attempt", async () => {
+  const app = application();
+  await app.choose("A");
+  app.upload("repeat");
+  app.api.createReconciliation = async () => { throw duplicateError(); };
+  await app.createReconciliation(submit);
+  const pending = deferred();
+  app.api.createReconciliation = () => pending.promise;
+  const confirming = app.confirmReimport();
+  app.upload("new");
+  pending.reject(new ApiError("Old reference unavailable", 409, { code: "invalid_reprocess_reference" }));
+  await confirming;
+  assert.equal(app.read().duplicateImport, null);
+  assert.equal(app.read().errorMessage, "");
+  assert.equal(app.read().salesFile.name, "new-sales.csv");
 });

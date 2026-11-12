@@ -9,7 +9,7 @@ const { outputText } = ts.transpileModule(readFileSync(new URL("../src/csv-impor
 });
 const exports = {};
 vm.runInNewContext(outputText, { exports });
-const { createDefaultImportConfiguration, importConfigurationKey, isImportPreviewCurrent, getImportIssueMessage, resolveImportColumn } = exports;
+const { createDefaultImportConfiguration, importConfigurationKey, isImportPreviewCurrent, resolveImportColumn } = exports;
 
 const identity = () => ({
   companyId: "company-A", workspaceRequestId: 1,
@@ -62,17 +62,6 @@ test("late preview cannot be reused after changing company, workspace, files, ma
     assert.equal(isImportPreviewCurrent(original, { ...original, ...changes }), false);
   }
 });
-
-test("import issues explain actionable CSV failures and preserve unknown server details", () => {
-  for (const code of ["missing_column", "ambiguous_column", "invalid_date", "invalid_amount", "duplicate_sale_id"]) {
-    const message = getImportIssueMessage({ code, message: "English server fallback" });
-    assert.ok(message.length > 0);
-    assert.notEqual(message, "English server fallback");
-  }
-  assert.equal(getImportIssueMessage({ code: "new_failure", message: "Detalhe específico enviado pela API" }),
-    "Detalhe específico enviado pela API");
-});
-
 
 test("saved column mappings resolve unique case/whitespace/BOM variants without changing the draft", () => {
   for (const [configured, actual] of [

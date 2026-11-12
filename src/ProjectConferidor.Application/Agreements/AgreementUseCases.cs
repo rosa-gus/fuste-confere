@@ -12,7 +12,7 @@ public sealed class AgreementUseCases(ICompanyRepository companies, IAgreementRe
     public async Task<OperationResult<bool>> DeleteAsync(Guid companyId, Guid id, CancellationToken cancellationToken) =>
         await agreements.DeleteAgreementAsync(companyId, id, cancellationToken)
             ? OperationResult<bool>.Success(true)
-            : OperationResult<bool>.Failure("Agreement not found.", 404);
+            : OperationResult<bool>.Failure("Acordo não encontrado. Ele pode ter sido excluído em outra sessão.", 404);
 
     public async Task<OperationResult<CommissionAgreement>> CreateAsync(
         Guid companyId,
@@ -22,18 +22,18 @@ public sealed class AgreementUseCases(ICompanyRepository companies, IAgreementRe
     {
         if (effectiveFrom == default)
         {
-            return OperationResult<CommissionAgreement>.Failure("Agreement effective date is required.");
+            return OperationResult<CommissionAgreement>.Failure("Informe a data de início do acordo.");
         }
 
         if (await companies.FindCompanyAsync(companyId, cancellationToken) is null)
         {
-            return OperationResult<CommissionAgreement>.Failure("Company not found.", 404);
+            return OperationResult<CommissionAgreement>.Failure("Representada não encontrada.", 404);
         }
 
         var current = await agreements.ListAgreementsForCompanyAsync(companyId, cancellationToken);
         if (current.Any(item => item.EffectiveFrom == effectiveFrom))
         {
-            return OperationResult<CommissionAgreement>.Failure("An agreement already exists for this effective date.", 409);
+            return OperationResult<CommissionAgreement>.Failure("Já existe um acordo com essa data de início.", 409);
         }
 
         try
@@ -48,7 +48,7 @@ public sealed class AgreementUseCases(ICompanyRepository companies, IAgreementRe
         }
         catch (KeyNotFoundException)
         {
-            return OperationResult<CommissionAgreement>.Failure("Company not found.", 404);
+            return OperationResult<CommissionAgreement>.Failure("Representada não encontrada.", 404);
         }
         catch (ArgumentOutOfRangeException exception)
         {

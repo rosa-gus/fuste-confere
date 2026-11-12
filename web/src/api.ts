@@ -25,7 +25,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   try {
     response = await fetch(resolveApiUrl(path), { ...init, credentials: "omit" });
   } catch {
-    throw new ApiError("NETWORK_UNAVAILABLE", 0);
+    throw new ApiError("Não foi possível conectar ao Project Conferidor. Confira se a API está em execução.", 0);
   }
 
   const body = await response.text();
@@ -39,7 +39,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!response.ok) {
     const problem = payload as ProblemDetails | undefined;
     throw new ApiError(
-      problem?.detail ?? problem?.title ?? `HTTP_${response.status}`,
+      problem?.detail ?? problem?.title ?? "Não foi possível concluir a operação. Confira os dados e tente novamente.",
       response.status,
       problem,
     );
@@ -121,11 +121,16 @@ export const api = {
     return request<ImportPreview>(`/api/companies/${companyId}/imports/preview`, { method: "POST", body: form });
   },
 
-  createReconciliation: (companyId: string, sales: File, statement: File, configuration?: ImportConfiguration | null) => {
+  createReconciliation: (companyId: string, sales: File, statement: File, configuration?: ImportConfiguration | null,
+    attempt?: { requestId: string; reprocessOf?: string }) => {
     const form = new FormData();
     form.append("sales", sales);
     form.append("statement", statement);
     if (configuration) form.append("configuration", JSON.stringify(configuration));
+    if (attempt) {
+      form.append("requestId", attempt.requestId);
+      if (attempt.reprocessOf) form.append("reprocessOf", attempt.reprocessOf);
+    }
     return request<Reconciliation>(
       `/api/companies/${companyId}/reconciliations`,
       {

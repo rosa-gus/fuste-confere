@@ -36,25 +36,25 @@ public sealed partial class CsvSourceFileReader : ISourceFileReader, IImportFile
         {
             if (!TryGet(row.Cells, idIndex, out var id) || string.IsNullOrWhiteSpace(id))
             {
-                errors.Add($"Sales: missing sale ID at row {row.Line}.");
+                errors.Add($"Vendas: falta o identificador da venda na linha {row.Line}.");
                 continue;
             }
 
             if (!TryParseDate(Get(row.Cells, dateIndex), out var date))
             {
-                errors.Add($"Sales: invalid sale date at row {row.Line}.");
+                errors.Add($"Vendas: a data da venda é inválida na linha {row.Line}.");
                 continue;
             }
 
             if (!TryParseAmount(Get(row.Cells, amountIndex), table.Delimiter, out var amount) || amount < 0)
             {
-                errors.Add($"Sales: invalid gross amount at row {row.Line}.");
+                errors.Add($"Vendas: o valor bruto é inválido na linha {row.Line}.");
                 continue;
             }
 
             if (amount > MonetaryLimits.MaximumAmount)
             {
-                errors.Add($"Sales: gross amount must not exceed {MonetaryLimits.MaximumAmountText} at row {row.Line}.");
+                errors.Add($"Vendas: o valor bruto deve ser de, no máximo, {MonetaryLimits.MaximumAmountDisplay} na linha {row.Line}.");
                 continue;
             }
 
@@ -82,19 +82,19 @@ public sealed partial class CsvSourceFileReader : ISourceFileReader, IImportFile
         {
             if (!TryGet(row.Cells, idIndex, out var id) || string.IsNullOrWhiteSpace(id))
             {
-                errors.Add($"Statement: missing sale ID at row {row.Line}.");
+                errors.Add($"Comissões: falta o identificador da venda na linha {row.Line}.");
                 continue;
             }
 
             if (!TryParseAmount(Get(row.Cells, amountIndex), table.Delimiter, out var amount) || amount < 0)
             {
-                errors.Add($"Statement: invalid commission amount at row {row.Line}.");
+                errors.Add($"Comissões: o valor da comissão é inválido na linha {row.Line}.");
                 continue;
             }
 
             if (amount > MonetaryLimits.MaximumAmount)
             {
-                errors.Add($"Statement: commission amount must not exceed {MonetaryLimits.MaximumAmountText} at row {row.Line}.");
+                errors.Add($"Comissões: a comissão deve ser de, no máximo, {MonetaryLimits.MaximumAmountDisplay} na linha {row.Line}.");
                 continue;
             }
 
@@ -106,6 +106,7 @@ public sealed partial class CsvSourceFileReader : ISourceFileReader, IImportFile
 
     private static async Task<CsvTable> ReadTableAsync(Stream stream, string label, CancellationToken cancellationToken, char? configuredDelimiter = null)
     {
+        label = label == "sales" ? "vendas" : "comissões";
         using var reader = new StreamReader(
             stream,
             new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
@@ -115,7 +116,7 @@ public sealed partial class CsvSourceFileReader : ISourceFileReader, IImportFile
         var content = await reader.ReadToEndAsync(cancellationToken);
         if (string.IsNullOrWhiteSpace(content))
         {
-            return new CsvTable([], [], ',', [$"The {label} file is empty."]);
+            return new CsvTable([], [], ',', [$"O arquivo de {label} está vazio."]);
         }
 
         var firstLineEnd = content.IndexOfAny(['\r', '\n']);
@@ -125,12 +126,12 @@ public sealed partial class CsvSourceFileReader : ISourceFileReader, IImportFile
         var parsed = ParseRecords(content, delimiter, recordLines);
         if (parsed.Error is not null)
         {
-            return new CsvTable([], [], delimiter, [$"The {label} file is invalid: {parsed.Error}."]);
+            return new CsvTable([], [], delimiter, [$"O arquivo de {label} tem {parsed.Error}."]);
         }
 
         if (parsed.Records.Count == 0)
         {
-            return new CsvTable([], [], delimiter, [$"The {label} file has no header row."]);
+            return new CsvTable([], [], delimiter, [$"O arquivo de {label} não contém cabeçalho."]);
         }
 
         var headers = parsed.Records[0].Select(NormalizeHeader).ToArray();
@@ -140,7 +141,7 @@ public sealed partial class CsvSourceFileReader : ISourceFileReader, IImportFile
             .ToList();
         var errors = rows
             .Where(row => row.Cells.Count != headers.Length)
-            .Select(row => $"The {label} file has {row.Cells.Count} columns at row {row.Line}; expected {headers.Length}.")
+            .Select(row => $"O arquivo de {label} tem {row.Cells.Count} colunas na linha {row.Line}; eram esperadas {headers.Length}.")
             .ToList();
         return new CsvTable(headers, rows, delimiter, errors, parsed.Records[0].Select(value => value.Trim().TrimStart('\uFEFF')).ToArray());
     }
@@ -196,7 +197,7 @@ public sealed partial class CsvSourceFileReader : ISourceFileReader, IImportFile
 
         if (insideQuotes)
         {
-            return ([], "unclosed quotation mark");
+            return ([], "aspas sem fechamento");
         }
 
         if (field.Length > 0 || record.Count > 0)
@@ -226,7 +227,11 @@ public sealed partial class CsvSourceFileReader : ISourceFileReader, IImportFile
     {
         if (index < 0)
         {
-            errors.Add($"Required column is missing: {column}.");
+            var label = column switch {
+                "sale_id" => "identificador da venda", "sale_date" => "data da venda",
+                "gross_amount" => "valor bruto", "commission_amount" => "valor da comissão", _ => column
+            };
+            errors.Add($"Falta a coluna obrigatória {column} ({label}).");
         }
     }
 

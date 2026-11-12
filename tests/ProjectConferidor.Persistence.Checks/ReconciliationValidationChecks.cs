@@ -23,36 +23,36 @@ internal static class ReconciliationValidationChecks
 
         foreach (var (sales, statement, detail) in new[]
         {
-            (salesHeader + "V1,2026-03-01,1000000000000", validStatement, "Sales: gross amount must not exceed 999999999999.99 at row 2."),
-            (validSales, statementHeader + "V1,1000000000000", "Statement: commission amount must not exceed 999999999999.99 at row 2."),
-            (salesHeader + "V1,2026-03-01,79228162514264337593543950335", validStatement, "Sales: gross amount must not exceed 999999999999.99 at row 2."),
-            (validSales, statementHeader + "V1,79228162514264337593543950335", "Statement: commission amount must not exceed 999999999999.99 at row 2."),
-            (validSales, statementHeader + "V1,999999999999.99\nv1,0.01", "Reported commission total for sale ID V1 must not exceed 999999999999.99."),
-            (validSales, statementHeader + "other,999999999999.99\nOTHER,0.01", "Reported commission total for sale ID other must not exceed 999999999999.99."),
-            (validSales + "v1,2026-03-02,200", validStatement, "The sales file contains a duplicate sale ID: V1."),
-            (salesHeader + "V1,2026-03-01,99999999999999999999999999999999999999999", validStatement, "Sales: invalid gross amount at row 2.")
+            (salesHeader + "V1,2026-03-01,1000000000000", validStatement, "Vendas: o valor bruto deve ser de, no máximo, R$ 999.999.999.999,99 na linha 2."),
+            (validSales, statementHeader + "V1,1000000000000", "Comissões: a comissão deve ser de, no máximo, R$ 999.999.999.999,99 na linha 2."),
+            (salesHeader + "V1,2026-03-01,79228162514264337593543950335", validStatement, "Vendas: o valor bruto deve ser de, no máximo, R$ 999.999.999.999,99 na linha 2."),
+            (validSales, statementHeader + "V1,79228162514264337593543950335", "Comissões: a comissão deve ser de, no máximo, R$ 999.999.999.999,99 na linha 2."),
+            (validSales, statementHeader + "V1,999999999999.99\nv1,0.01", "A soma das comissões informadas para a venda V1 deve ser de, no máximo, R$ 999.999.999.999,99."),
+            (validSales, statementHeader + "other,999999999999.99\nOTHER,0.01", "A soma das comissões informadas para a venda other deve ser de, no máximo, R$ 999.999.999.999,99."),
+            (validSales + "v1,2026-03-02,200", validStatement, "O arquivo de vendas repete o identificador V1."),
+            (salesHeader + "V1,2026-03-01,99999999999999999999999999999999999999999", validStatement, "Vendas: o valor bruto é inválido na linha 2.")
         })
         {
             using var salesStream = Input(sales);
             using var statementStream = Input(statement);
             var result = await useCases.RunAsync(company.Id, salesStream, statementStream, default);
             if (result.IsSuccess || result.StatusCode != 400 || result.Error != detail)
-                throw new Exception($"Expected English validation error '{detail}', got '{result.Error}'.");
+                throw new Exception($"Expected Portuguese validation error '{detail}', got '{result.Error}'.");
             if ((await repository.ListReconciliationsForCompanyAsync(company.Id, default)).Count != 0)
                 throw new Exception("Failed validation saved a reconciliation.");
         }
 
         foreach (var (content, expected) in new[]
         {
-            ("", "The statement file is empty."),
-            ("sale_id,commission_amount\nV1,1,2", "The statement file has 3 columns at row 2; expected 2."),
-            ("sale_id,commission_amount\nV1,\"1", "The statement file is invalid: unclosed quotation mark.")
+            ("", "O arquivo de comissões está vazio."),
+            ("sale_id,commission_amount\nV1,1,2", "O arquivo de comissões tem 3 colunas na linha 2; eram esperadas 2."),
+            ("sale_id,commission_amount\nV1,\"1", "O arquivo de comissões tem aspas sem fechamento.")
         })
         {
             using var stream = Input(content);
             var result = await reader.ReadStatementAsync(stream, default);
-            if (!result.Errors.Contains(expected) || result.Errors.Any(error => error.Contains("demonstrativo")))
-                throw new Exception("Statement CSV errors must use the English statement label.");
+            if (!result.Errors.Contains(expected))
+                throw new Exception("Statement CSV errors must use Portuguese labels.");
         }
 
         // A defensive fallback also covers arithmetic failures from inconsistent
@@ -64,7 +64,7 @@ internal static class ReconciliationValidationChecks
         using (var statementStream = Input(validStatement))
         {
             var result = await useCases.RunAsync(inconsistent.Id, salesStream, statementStream, default);
-            if (result.IsSuccess || result.StatusCode != 400 || result.Error != "The reconciliation exceeds the supported numeric range.")
+            if (result.IsSuccess || result.StatusCode != 400 || result.Error != "Não foi possível calcular a conferência: os valores excedem o limite numérico suportado.")
                 throw new Exception("Arithmetic overflow was not converted to a safe validation error.");
             if ((await repository.ListReconciliationsForCompanyAsync(inconsistent.Id, default)).Count != 0)
                 throw new Exception("Arithmetic overflow saved a reconciliation.");
@@ -77,7 +77,7 @@ internal static class ReconciliationValidationChecks
             var result = await useCases.RunAsync(company.Id, salesStream, statementStream, default);
             if (!result.IsSuccess) throw new Exception("Valid boundary sale failed after validation errors.");
         }
-        Console.WriteLine("PASS reconciliation validation: extreme amounts, per-sale totals, duplicates, English statement errors, safe overflow response and no partial saves.");
+        Console.WriteLine("PASS reconciliation validation: extreme amounts, per-sale totals, duplicates, Portuguese statement errors, safe overflow response and no partial saves.");
     }
 
     private static MemoryStream Input(string text) => new(Encoding.UTF8.GetBytes(text));

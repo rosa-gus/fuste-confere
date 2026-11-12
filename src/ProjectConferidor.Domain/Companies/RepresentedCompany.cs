@@ -7,7 +7,7 @@ public sealed record RepresentedCompany(Guid Id, string Name, DateTimeOffset Cre
         var normalizedName = name.Trim();
         if (normalizedName.Length is 0 or > 160)
         {
-            throw new ArgumentException("Company name must contain between 1 and 160 characters.", nameof(name));
+            throw new ArgumentException("O nome da representada deve ter entre 1 e 160 caracteres.");
         }
 
         return new RepresentedCompany(Guid.NewGuid(), normalizedName, DateTimeOffset.UtcNow);
