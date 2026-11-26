@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="src/Fuste.Domain/Fuste.Domain.csproj" />
+  <Project Path="src/Fuste.Application/Fuste.Application.csproj" />
+  <Project Path="src/Fuste.Infrastructure/Fuste.Infrastructure.csproj" />
+  <Project Path="src/Fuste.Api/Fuste.Api.csproj" />
+  <Project Path="tests/Fuste.Persistence.Checks/Fuste.Persistence.Checks.csproj" />
+</Solution>

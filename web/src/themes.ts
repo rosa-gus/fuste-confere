@@ -37,16 +37,6 @@ export function initializeTheme(): void {
     cleanupStorageKeys(localStorage);
     const saved = localStorage.getItem(storageKey);
     if (isTheme(saved)) theme = saved;
-    if (saved === null) {
-      // Preserve preferences written before versioned storage keys existed.
-      const legacyKey = "project-conferidor.theme";
-      const legacyTheme = localStorage.getItem(legacyKey);
-      if (isTheme(legacyTheme)) {
-        theme = legacyTheme;
-        localStorage.setItem(storageKey, legacyTheme);
-        localStorage.removeItem(legacyKey);
-      }
-    }
   } catch {
     // Use the default theme when browser storage is unavailable.
   }

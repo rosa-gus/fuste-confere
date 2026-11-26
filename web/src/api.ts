@@ -20,24 +20,25 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+async function readJson(response: Response): Promise<unknown> {
+  const body = await response.text();
+  try {
+    return body ? JSON.parse(body) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+async function requestResponse(path: string, init?: RequestInit): Promise<Response> {
   let response: Response;
   try {
     response = await fetch(resolveApiUrl(path), { ...init, credentials: "omit" });
   } catch {
-    throw new ApiError("Não foi possível conectar ao Project Conferidor. Confira se a API está em execução.", 0);
-  }
-
-  const body = await response.text();
-  let payload: unknown;
-  try {
-    payload = body ? JSON.parse(body) : undefined;
-  } catch {
-    payload = undefined;
+    throw new ApiError("Não foi possível conectar ao Fuste. Confira se a API está em execução.", 0);
   }
 
   if (!response.ok) {
-    const problem = payload as ProblemDetails | undefined;
+    const problem = await readJson(response) as ProblemDetails | undefined;
     throw new ApiError(
       problem?.detail ?? problem?.title ?? "Não foi possível concluir a operação. Confira os dados e tente novamente.",
       response.status,
@@ -45,7 +46,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     );
   }
 
-  return payload as T;
+  return response;
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  return await readJson(await requestResponse(path, init)) as T;
 }
 
 export const api = {
@@ -94,6 +99,14 @@ export const api = {
 
   getReconciliation: (id: string) =>
     request<Reconciliation>(`/api/reconciliations/${id}`),
+
+  exportReconciliation: async (id: string): Promise<Blob> => {
+    const response = await requestResponse(`/api/reconciliations/${id}/export`, { cache: "no-store" });
+    if (response.headers.get("Content-Type")?.split(";")[0].trim().toLowerCase() !== "text/csv") {
+      throw new ApiError("A API não retornou um arquivo CSV. Tente novamente.", response.status);
+    }
+    return response.blob();
+  },
 
   listImportProfiles: (companyId: string) =>
     request<ImportProfile[]>(`/api/companies/${companyId}/import-profiles`),

@@ -1,6 +1,6 @@
 # Roadmap
 
-Checklist para consolidar e publicar o núcleo do Project Conferidor. Os próximos passos priorizam a exportação de resultados e a preparação para distribuição, além das validações manuais pendentes. As etapas pendentes não têm prazo definido.
+Checklist para consolidar e publicar o MVP do Fuste. Os próximos passos priorizam a preparação para distribuição e as validações manuais pendentes.
 
 ## Base disponível
 
@@ -38,9 +38,11 @@ O [guia de validação ponta a ponta](tests/e2e/README.md) explica como executar
 
 ## Exportação de resultados
 
-- [ ] Definir as colunas e os formatos do CSV e o comportamento da exportação completa ou filtrada.
-- [ ] Permitir exportar uma conferência salva com identificadores, valores, percentuais, diferenças e situações.
-- [ ] Verificar a fidelidade dos valores exportados e a distinção entre zero e ausência de valor.
+- [x] Definir as colunas e o formato do CSV para a exportação completa.
+- [x] Permitir exportar uma conferência salva com identificadores, valores, percentuais, diferenças e situações.
+- [x] Verificar automaticamente a fidelidade dos valores exportados e a distinção entre zero e ausência de valor.
+- [x] Validar no navegador o download a partir dos resultados e do histórico (UI-21 e UI-22).
+- [ ] Adicionar a exportação das linhas que atendem aos filtros ativos.
 
 ## Instalação e operação
 
@@ -60,7 +62,7 @@ Integrações com ERP, bancos e outros serviços ficam a cargo de quem utilizar 
 
 ## Marca e divulgação
 
-- [ ] Definir o nome definitivo do projeto.
+- [x] Definir Fuste como nome do produto e `fuste-confere` como identificador.
 - [ ] Definir identidade visual, logotipo e ícone.
 - [ ] Escrever uma apresentação curta do projeto.
 - [ ] Criar um showcase com telas e um fluxo de demonstração.

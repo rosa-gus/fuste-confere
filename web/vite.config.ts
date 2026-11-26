@@ -13,7 +13,7 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: '../src/ProjectConferidor.Api/wwwroot',
+    outDir: '../src/Fuste.Api/wwwroot',
     emptyOutDir: true,
   },
 });

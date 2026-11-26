@@ -4,11 +4,10 @@
 .idea/
 *.user
 *.suo
-project-conferidor.json
-project-conferidor.db
-project-conferidor.db-wal
-project-conferidor.db-shm
-project-conferidor.db-journal
+fuste-confere.db
+fuste-confere.db-wal
+fuste-confere.db-shm
+fuste-confere.db-journal
 web/node_modules/
 web/dist/
-src/ProjectConferidor.Api/wwwroot/
+src/Fuste.Api/wwwroot/

@@ -526,7 +526,7 @@
 <svelte:window ondragover={preventOutsideFileDrop} ondrop={preventOutsideFileDrop} ondragend={clearFileDrag} />
 
 <svelte:head>
-  <title>Project Conferidor — comissões com clareza</title>
+  <title>Fuste — conferência de comissões</title>
   <meta
     name="description"
     content="Confira com clareza as comissões sobre suas vendas."
@@ -584,9 +584,9 @@
       <span class="brand-mark" aria-hidden="true"
         ><span></span><span></span><span></span></span
       >
-      <span class="brand-name">project <strong>conferidor</strong></span>
+      <span class="brand-name"><strong>Fuste</strong></span>
     </div>
-    <Tag type="blue" size="default">Em desenvolvimento</Tag>
+    <Tag type="blue" size="default">MVP</Tag>
     </div>
     <OptionsMenu />
   </header>
@@ -1078,11 +1078,11 @@
     </div>
     <div class="footer-credits-row">
       <div class="footer-credits">
-        <span>Desenvolvido por <a href={packageJson.author.url} target="_blank" rel="noopener noreferrer" aria-label={`Portfólio de ${packageJson.author.name} (abre em nova aba)`}>{packageJson.author.name}</a></span>
+        <span>© 2026 <a href={packageJson.author.url} target="_blank" rel="noopener noreferrer" aria-label={`Portfólio de ${packageJson.author.name} (abre em nova aba)`}>{packageJson.author.name}</a></span>
         <Divider orientation="vertical" decorative class="inline-separator footer-credits-separator" margin="0" />
         <span class="footer-license">Licenciado sob <a href="/LICENSE.txt" target="_blank" rel="noopener noreferrer" aria-label="Licença Apache-2.0 (abre em nova aba)">{packageJson.license}</a></span>
       </div>
-      <a class="footer-github" href={packageJson.source} target="_blank" rel="noopener noreferrer" aria-label="Perfil de rosa gus no GitHub (abre em nova aba)">
+      <a class="footer-github" href={packageJson.source} target="_blank" rel="noopener noreferrer" aria-label="Perfil de Rosa Gus no GitHub (abre em nova aba)">
         GitHub <Launch size={16} aria-hidden="true" />
       </a>
     </div>

@@ -477,7 +477,7 @@ test("confirmation uses a fresh request ID and retains it across a network retry
   app.api.createReconciliation = async (_company, _sales, _statement, _config, attempt) => {
     attempts.push({ ...attempt });
     if (attempts.length === 1) throw duplicateError();
-    if (attempts.length === 2) throw new ApiError("Não foi possível conectar ao Project Conferidor. Confira se a API está em execução.", 0);
+    if (attempts.length === 2) throw new ApiError("Não foi possível conectar ao Fuste. Confira se a API está em execução.", 0);
     return reconciliation("A", "reprocessed");
   };
   await app.createReconciliation(submit);
@@ -500,7 +500,7 @@ test("normal network retries reuse request IDs and do not duplicate a known hist
   const attempts = [];
   app.api.createReconciliation = async (_company, _sales, _statement, _config, attempt) => {
     attempts.push(attempt.requestId);
-    if (attempts.length === 1) throw new ApiError("Não foi possível conectar ao Project Conferidor. Confira se a API está em execução.", 0);
+    if (attempts.length === 1) throw new ApiError("Não foi possível conectar ao Fuste. Confira se a API está em execução.", 0);
     return reconciliation("A", "history-A");
   };
   await app.createReconciliation(submit);

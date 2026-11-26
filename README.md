@@ -1,143 +1,90 @@
-# Project Conferidor
+# Fuste
 
-Aplicação para conferir comissões de vendas. Compara o valor de comissão informado por uma empresa representada com o valor calculado a partir das vendas e dos percentuais acordados.
+**Fuste** é um aplicativo local para representantes comerciais que precisam conferir comissões de vendas. Ele cruza as vendas faturadas com o demonstrativo enviado pela representada, calcula quanto era esperado conforme o acordo vigente e mostra as diferenças por venda. O identificador do projeto é `fuste-confere`.
 
-O projeto oferece um núcleo para uso e adaptação por diferentes empresas. Integrações e recursos específicos podem ser desenvolvidos por quem utilizar a aplicação.
-
-## Fluxo de uso
-
-```mermaid
-flowchart TD
-    A[Cadastrar a empresa representada] --> B[Registrar percentuais e datas de início]
-    B --> C[Importar CSVs de vendas e demonstrativo de comissões]
-    C --> D[Conferir os resultados]
-    D --> E[Consultar o histórico salvo]
-```
-
-Para cada venda, a aplicação usa o acordo mais recente vigente na data da venda e calcula a comissão sobre o valor bruto faturado. Por exemplo, uma venda de R$ 10.000,00 com percentual de 5% gera uma comissão esperada de R$ 500,00.
-
-Os arquivos são relacionados pelo identificador da venda. Os cálculos usam `decimal`, com arredondamento para centavos; valores exatamente no meio são arredondados para longe de zero. O histórico preserva os valores e o percentual utilizados em cada conferência.
-
-## Resultados
-
-| Resultado | Significado |
-| --- | --- |
-| Conferido | Comissão esperada e informada coincidem. |
-| Divergência | Os valores são diferentes. |
-| Sem registro no demonstrativo | Existe venda, mas falta comissão informada. |
-| Venda não localizada | Existe comissão no demonstrativo, mas a venda não foi encontrada. |
-| Sem acordo vigente | Não existe percentual aplicável à data da venda. |
-
-A diferença é calculada como **comissão esperada − comissão informada**. Um valor positivo indica comissão informada abaixo da esperada. Quando não é possível comparar os valores, a diferença fica sem valor.
+O projeto está em fase de **MVP**. O fluxo principal está disponível, mas pode haver instabilidades e lacunas de funcionalidade. Consulte os [limites técnicos](#limites-técnicos) para verificar se o seu processo cabe no escopo atual.
 
 ## Instalação e execução
 
-Requisitos: SDK do .NET 10 e Node.js 22.12 ou superior em uma versão compatível com Vite 8, com npm. Execute os comandos a partir da raiz do projeto.
-
-Na primeira execução, instale as dependências e gere a interface:
+Você precisa do SDK do .NET 10, de uma versão do Node.js compatível com o Vite 8 (22.12+ na linha 22 ou 24, por exemplo) e do npm. Execute os comandos abaixo na raiz do repositório.
 
 ```sh
-cd web
-npm install
-npm run build
-cd ..
+npm --prefix web ci
+npm --prefix web run build
+dotnet run --project src/Fuste.Api
 ```
 
-Inicie a aplicação:
+Abra **http://127.0.0.1:5080**. A API serve a interface compilada em `src/Fuste.Api/wwwroot` e usa SQLite como banco local.
 
-```sh
-dotnet run --project src/ProjectConferidor.Api
-```
+## Primeira conferência
 
-Acesse **http://127.0.0.1:5080**. A API serve a interface gerada em `src/ProjectConferidor.Api/wwwroot`. Gere-a novamente quando alterar o frontend.
+1. Cadastre e selecione uma representada.
+2. Cadastre os acordos com a data de início e o percentual. Use `5` para representar 5%.
+3. Em **Nova conferência**, selecione o CSV de vendas e o CSV do demonstrativo. Se os cabeçalhos ou formatos forem diferentes do padrão, use **Configurar colunas** para mapear os campos e conferir a prévia. Você pode salvar o mapeamento como perfil.
+4. Execute a conferência. Use os filtros para investigar diferenças e o histórico para reabrir uma execução.
+5. Use **Baixar CSV** para exportar todas as linhas da execução salva. A exportação inclui a data, os valores, o percentual, a diferença e a situação de cada venda.
 
-Os dados ficam no arquivo `project-conferidor.db`, na pasta `ProjectConferidor` do diretório de dados locais do usuário. Para escolher outra pasta, defina a variável de ambiente `PROJECT_CONFERIDOR_DATA_DIR` antes de iniciar a aplicação. Não é necessário instalar um servidor de banco de dados.
+O [exemplo mensal](example/README.md) traz arquivos fictícios, acordos e resultados esperados. O guia de [validação ponta a ponta](tests/e2e/README.md) também inclui um exemplo com colunas e formatos personalizados.
 
-Para fazer um backup manual, pare a aplicação e copie a pasta de dados inteira. Para restaurar, com a aplicação parada, recoloque a cópia na pasta de dados configurada.
+### Arquivos de entrada
 
-## Como usar
+| Arquivo | Cabeçalhos padrão | Alternativas em português |
+| --- | --- | --- |
+| Vendas | `sale_id,sale_date,gross_amount` | `id_venda,data_venda,valor_bruto` |
+| Demonstrativo | `sale_id,commission_amount` | `id_venda,valor_comissao` |
 
-1. Cadastre e selecione uma empresa representada.
-2. Registre os acordos com percentual e data de início. Informe `5` para representar 5%.
-3. Em **Nova conferência**, selecione o CSV de vendas e o demonstrativo de comissões.
-4. Se necessário, configure as colunas e os formatos dos arquivos, valide a prévia e salve um perfil de importação para reutilizar.
-5. Execute a conferência. Consulte os resultados, filtre as linhas e acesse as execuções anteriores no histórico.
+Use o mesmo identificador nos dois arquivos. Cada venda deve aparecer uma única vez no arquivo de vendas. Vários lançamentos de comissão para a mesma venda são somados no demonstrativo. No formato padrão, use vírgula como separador com decimais como `1250.50`, ou ponto e vírgula com decimais como `1.250,50`. As datas podem estar em `yyyy-MM-dd` ou `dd/MM/yyyy`. O mapeamento personalizado permite escolher o formato numérico independentemente do separador.
 
-Para experimentar, siga o [exemplo completo](example/README.md), com arquivos fictícios e resultados esperados. A pasta [samples](samples/) contém arquivos menores para uma conferência rápida.
+### Como interpretar o resultado
 
-### Arquivos CSV
+O Fuste aplica o acordo mais recente vigente na data da venda ao seu valor bruto faturado. São usados valores decimais e arredondamento para centavos, com empates arredondados para longe de zero. A diferença é a **comissão esperada menos a informada**. Uma diferença positiva indica que a comissão informada ficou abaixo da esperada.
 
-No formato padrão, os arquivos devem conter estas colunas:
-
-| Arquivo | Cabeçalhos |
+| Situação | Significado |
 | --- | --- |
-| Vendas | `sale_id,sale_date,gross_amount` |
-| Demonstrativo | `sale_id,commission_amount` |
+| Conferido | A comissão esperada coincide com a informada. |
+| Divergência | As duas comissões têm valores diferentes. |
+| Sem registro no demonstrativo | A venda existe e não tem lançamento de comissão. |
+| Venda não localizada | O demonstrativo informa comissão para um ID ausente no arquivo de vendas. |
+| Sem acordo vigente | A data da venda não tem um percentual aplicável. |
 
-Também são aceitos os nomes `id_venda`, `data_venda`, `valor_bruto` e `valor_comissao`. Outros layouts podem ser mapeados pela configuração de importação.
-
-No formato padrão, use vírgula como separador com valores como `1250.50`, ou ponto e vírgula com valores como `1.250,50`. As datas aceitas são `yyyy-MM-dd` e `dd/MM/yyyy`. Na importação configurada, o formato numérico pode ser escolhido independentemente do separador.
-
-O arquivo de vendas deve conter uma linha por identificador. Entradas repetidas no demonstrativo são somadas por venda. Se houver registros inválidos, a conferência é rejeitada sem salvar um resultado parcial. A interface limita o tamanho combinado dos arquivos a 9 MB.
-
-Os resultados e as configurações utilizadas são salvos; os arquivos originais não são armazenados. Guarde-os caso precise repetir a importação.
+Quando um valor está indisponível, o CSV de resultados deixa o campo em branco. Um valor monetário igual a zero aparece como `0,00`. O CSV usa UTF-8 com BOM, ponto e vírgula e vírgula decimal. Ao importar em uma planilha, selecione o tipo texto para **ID da venda** para preservar zeros à esquerda. IDs que possam ser interpretados como fórmulas recebem um apóstrofo de proteção.
 
 ### Reimportações
 
-Ao enviar novamente os mesmos arquivos para a mesma empresa com a mesma configuração de leitura, a aplicação avisa que eles já foram conferidos. Você pode abrir o resultado anterior ou escolher **Conferir novamente** para calcular com os acordos atuais e salvar outro resultado. A conferência anterior é preservada.
+O histórico preserva os valores e o percentual usados em cada execução. Ao reenviar arquivos idênticos para a mesma empresa, com a mesma configuração, o Fuste permite abrir o resultado anterior ou confirmar uma nova execução com os acordos atuais. A nova conferência mantém a anterior no histórico.
 
-A identificação compara o conteúdo exato dos arquivos; renomeá-los não evita o aviso, mas alterar sua formatação pode fazer com que sejam considerados novos. Conferências anteriores à inclusão desse recurso continuam disponíveis, mas não participam da identificação de repetições.
+## Dados locais e backup
 
-## Arquitetura
+Por padrão, o Fuste usa o arquivo `fuste-confere.db` na pasta `Fuste` do diretório de dados locais do usuário. Defina `FUSTE_CONFERE_DATA_DIR` para escolher outra pasta.
 
-| Diretório | Responsabilidade |
-| --- | --- |
-| `src/ProjectConferidor.Domain` | Modelos e regras de negócio: vendas, acordos e conferência. |
-| `src/ProjectConferidor.Application` | Casos de uso, validações e contratos de acesso a dados e arquivos. |
-| `src/ProjectConferidor.Infrastructure` | Leitura dos CSVs e persistência em SQLite, sem ORM. |
-| `src/ProjectConferidor.Api` | API HTTP em ASP.NET Core com .NET 10 e hospedagem da interface. |
-| `web/` | Interface em Svelte 5, TypeScript, Vite e componentes do Carbon Design System, da IBM. |
-| `tests/` | Verificações de persistência, importação e regras de conferência. |
-| `web/tests/` | Verificações de importação, filtros, entradas financeiras e operações da interface. |
+Para fazer backup, pare a aplicação e copie a pasta de dados inteira. Para restaurar, pare a aplicação e aponte `FUSTE_CONFERE_DATA_DIR` para uma pasta dedicada com a cópia. Os arquivos CSV de origem não são armazenados no banco. Guarde-os se precisar reprocessar uma conferência.
 
-A interface chama a API, que aciona os casos de uso. Eles coordenam as regras de negócio e a persistência por contratos implementados na infraestrutura. O domínio permanece independente do banco e da interface.
+## Limites técnicos
 
-A interface, esta documentação e as mensagens da API estão em pt-BR. A API retorna os erros em `detail` e os diagnósticos de importação em `issues[].message`, prontos para exibição. Rotas, nomes de campos, situações e códigos técnicos permanecem em inglês; o frontend usa esses identificadores para controlar o fluxo e apresentar os rótulos da interface.
+- **Cálculo.** A regra atual aplica um percentual sobre o valor bruto faturado. Recebimentos parciais, estornos, regras de comissão por produto ou faixa e gestão de contestações estão fora do escopo atual.
+- **Importação.** A entrada é por dois arquivos CSV, com limite combinado de 9 MB na interface. A aplicação rejeita registros inválidos sem salvar uma conferência parcial. A detecção de reimportações usa os bytes dos arquivos e a configuração de leitura, então alterações de formatação podem fazer o envio ser tratado como novo.
+- **Exportação.** O download cobre a conferência inteira, incluindo linhas fora dos filtros ativos e da página aberta.
+- **Operação.** A configuração padrão escuta apenas no endereço local. A API ainda não tem autenticação. Distribuição em rede precisa de controle de acesso. A exclusão de uma representada remove seus acordos, perfis e histórico. A opção de limpar o banco remove todos os registros da aplicação.
+- **Integrações e maturidade.** O MVP opera por arquivos e ainda não integra ERP, bancos ou marketplaces. A homologação com exportações reais e a distribuição empacotada estão no [roadmap](ROADMAP.md).
 
-## Desenvolvimento
+## Desenvolvimento e verificação
 
-Para trabalhar na interface, mantenha a API em execução e abra outro terminal:
+O backend usa .NET 10, ASP.NET Core e SQLite. Os projetos `Fuste.Domain`, `Fuste.Application`, `Fuste.Infrastructure` e `Fuste.Api` separam regras, casos de uso, acesso a dados e HTTP. A interface em `web/` usa Svelte, TypeScript, Vite e o Carbon Design System da IBM.
+
+Para editar a interface, mantenha a API em execução e rode `npm --prefix web run dev`. Acesse **http://127.0.0.1:5173**. O Vite encaminha as chamadas à API da porta 5080.
 
 ```sh
-cd web
-npm run dev
+dotnet build fuste-confere.slnx
+dotnet run --project tests/Fuste.Persistence.Checks
+npm --prefix web run web:test
+npm --prefix web run web:typecheck
+python3 tests/e2e/run.py
 ```
 
-Acesse **http://127.0.0.1:5173**. O Vite encaminha as requisições da API para a porta 5080.
-
-Verificações disponíveis, a partir da raiz:
-
-```sh
-dotnet run --project tests/ProjectConferidor.Persistence.Checks
-cd web
-npm run web:test
-npm run web:typecheck
-```
-
-Para validar o fluxo HTTP com banco temporário e seguir o roteiro de aceite da interface, consulte a [validação ponta a ponta](tests/e2e/README.md).
-
-### Desenvolvimento de extensões
-
-**TODO:** documentar os pontos de extensão e o fluxo para acrescentar leitores, regras de cálculo e integrações desenvolvidas por terceiros, como ERP e serviços bancários.
-
-## Limitações e próximos passos
-
-O projeto está em fase de protótipo. Não contempla recebimentos parciais, estornos, gestão de contestações ou integração bancária. O cálculo atual se limita ao percentual sobre o valor bruto da venda.
-
-A API não possui autenticação e escuta apenas no endereço local por padrão. O uso em rede exige definir e configurar o controle de acesso. Excluir uma empresa remove seus acordos, perfis de importação e histórico; a limpeza do banco remove todos os registros da aplicação.
-
-As etapas de evolução estão no [roadmap](ROADMAP.md).
+A suíte HTTP usa um banco temporário. Gere a interface e compile a solução antes de executá-la. O [guia de validação](tests/e2e/README.md) inclui cenários automatizados e o roteiro de aceite pelo navegador.
 
 ## Licença
 
-Projeto de rosa gus, distribuído sob a [licença Apache 2.0](LICENSE). Consulte [NOTICE](NOTICE) para atribuições. Dependências e fontes mantêm suas próprias licenças.
+Copyright 2026 Rosa Gus
+
+Fuste é distribuído sob a [Apache License 2.0](LICENSE). Consulte o [NOTICE](NOTICE) para as atribuições de dependências e fontes.

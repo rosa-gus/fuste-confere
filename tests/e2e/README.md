@@ -10,8 +10,8 @@ Prepare o ambiente e instale as dependências conforme o [guia de instalação](
 
 ```sh
 npm --prefix web run build
-dotnet build src/ProjectConferidor.Api
-python3 tests/e2e/run.py --report /tmp/conferidor-e2e-report.json
+dotnet build src/Fuste.Api
+python3 tests/e2e/run.py --report /tmp/fuste-e2e-report.json
 ```
 
 O script `run.py` usa a compilação **Debug/net10.0**, inicia uma instância da API acessível apenas neste computador, em uma porta escolhida pelo sistema, e cria uma pasta temporária para os dados. Ao terminar, encerra o processo e remove essa pasta. O banco de uma instalação existente é preservado.
@@ -21,7 +21,7 @@ Cada grupo de cenários aprovado imprime uma linha `PASS`. Se algum cenário fal
 Execute também as verificações complementares:
 
 ```sh
-dotnet run --project tests/ProjectConferidor.Persistence.Checks
+dotnet run --project tests/Fuste.Persistence.Checks
 npm --prefix web run web:test
 npm --prefix web run web:typecheck
 ```
@@ -31,6 +31,7 @@ npm --prefix web run web:typecheck
 | Inicialização | Banco vazio, frontend compilado servido, cadastro de duas empresas e dois acordos. |
 | Exemplo mensal | 53 linhas, distribuição das cinco situações e quatro totais financeiros exatos conforme o [exemplo](../../example/README.md). |
 | Valores específicos | Diferenças positiva, negativa e de um centavo; comissão zero continua sendo um registro. |
+| Exportação CSV | Arquivos com 53 e 5 linhas, valores salvos, zeros à esquerda, campos vazios, escape de identificadores e conteúdo estável após reinício e alteração de acordo. |
 | Layout personalizado | Prévia válida sem salvar histórico; perfil salvo e recuperado; execução com o perfil recuperado. |
 | Formatos independentes | Vendas com `;` e decimal com ponto; demonstrativo com `,` e decimal com vírgula entre aspas. |
 | Identificadores | Zeros à esquerda preservados e duas comissões somadas para a venda `0001`. |
@@ -72,14 +73,14 @@ O roteiro percorre o cadastro, a importação, os resultados e o histórico pela
 Gere a interface e compile a API com os comandos da seção de execução. Em um terminal na raiz do repositório, use os comandos abaixo para iniciar a aplicação com uma pasta exclusiva para os testes. Este exemplo usa um shell de Linux ou macOS:
 
 ```sh
-validation_data_dir=$(mktemp -d /tmp/conferidor-aceite-XXXXXX)
+validation_data_dir=$(mktemp -d /tmp/fuste-aceite-XXXXXX)
 echo "$validation_data_dir"
-PROJECT_CONFERIDOR_DATA_DIR="$validation_data_dir" dotnet run --no-launch-profile --project src/ProjectConferidor.Api -- --urls http://127.0.0.1:5082
+FUSTE_CONFERE_DATA_DIR="$validation_data_dir" dotnet run --no-launch-profile --project src/Fuste.Api -- --urls http://127.0.0.1:5082
 ```
 
 Abra `http://127.0.0.1:5082`. Se você personalizou o endereço da API nas opções da aplicação, restaure o padrão para que a interface use a API desse endereço.
 
-Anote o caminho impresso por `echo`. Para testar o reinício, pare a aplicação com `Ctrl+C` e repita apenas o último comando no mesmo terminal. Isso reutiliza a mesma pasta de dados. Em outro terminal, defina `PROJECT_CONFERIDOR_DATA_DIR` com o caminho anotado. A pasta do teste manual permanece disponível para inspeção após encerrar a aplicação.
+Anote o caminho impresso por `echo`. Para testar o reinício, pare a aplicação com `Ctrl+C` e repita apenas o último comando no mesmo terminal. Isso reutiliza a mesma pasta de dados. Em outro terminal, defina `FUSTE_CONFERE_DATA_DIR` com o caminho anotado. A pasta do teste manual permanece disponível para inspeção após encerrar a aplicação.
 
 Registre cada cenário como **aprovado**, **reprovado** ou **não executado**, incluindo navegador, tamanho de tela e evidência de falhas. Os CSVs personalizados e os arquivos inválidos estão em [fixtures/](fixtures/).
 
@@ -105,14 +106,16 @@ Registre cada cenário como **aprovado**, **reprovado** ou **não executado**, i
 | UI-18 | Repetir o envio e escolher **Conferir novamente**. | Outra conferência aparece no histórico, com os valores anteriores preservados na conferência original. |
 | UI-19 | Alterar um acordo e repetir os mesmos arquivos, confirmando a nova execução. | Aviso continua aparecendo; o novo resultado usa os acordos atuais e o anterior permanece inalterado. |
 | UI-20 | Testar o aviso pelo teclado e simular falha de rede no reenvio confirmado; restabelecer a conexão e tentar novamente. | Foco inicial em **Conferir novamente**, ações bloqueadas durante o envio e apenas uma conferência para a mesma tentativa, mesmo se a primeira resposta se perder. |
+| UI-21 | Baixar o CSV do exemplo mensal na tela de resultados logo após a conferência. Depois, reabrir a execução no histórico, aplicar um filtro que mantenha mais de uma página e baixar na segunda página. | Os dois downloads geram o mesmo arquivo com 53 linhas de dados. A venda `0019` tem comissão informada `0,00`, e as vendas `0023` e `0030` têm diferenças `0,01` e `-17,25`. |
+| UI-22 | Abrir o exemplo personalizado pelo histórico e baixar o CSV. Em seguida, interromper a conexão antes de tentar baixar novamente. | O arquivo contém as cinco linhas esperadas e mantém `0001`, o percentual `5,5` e os campos ausentes em branco. Com a conexão interrompida, a tela exibe um erro em português e permite repetir o download. |
 
 ## Cobertura e limitações
 
 - A identificação de reimportações compara os bytes dos arquivos e a configuração de leitura por empresa. Arquivos equivalentes com formatação diferente são considerados novos; consulte a seção de [reimportações](../../README.md#reimportações).
-- Os cenários se concentram em importação, cálculo e histórico. Exportação, pacotes de distribuição, autenticação e backup/restauração ficam fora dessa cobertura.
+- Os cenários cobrem importação, cálculo, histórico e exportação completa. Pacotes de distribuição, autenticação e backup/restauração ficam fora dessa cobertura.
 - Os arquivos de referência representam layouts distintos, mas são fictícios. Para validar uma origem de dados usada na operação, repita o fluxo com exportações reais anonimizadas e confira os resultados esperados.
 - Os testes HTTP e o roteiro manual são complementares: as requisições verificam a API e a persistência, enquanto o roteiro verifica a interação no navegador.
 
 ## Registrar uma execução
 
-Ao compartilhar resultados em uma contribuição, informe a revisão do código testada, a data, o ambiente, os comandos executados e os cenários aprovados ou com falha. Para os testes manuais, inclua os IDs `UI-01` a `UI-20` e as evidências necessárias para reproduzir problemas. Identifique explicitamente os cenários não executados.
+Ao compartilhar resultados em uma contribuição, informe a revisão do código testada, a data, o ambiente, os comandos executados e os cenários aprovados ou com falha. Para os testes manuais, inclua os IDs `UI-01` a `UI-22` e as evidências necessárias para reproduzir problemas. Identifique explicitamente os cenários não executados.

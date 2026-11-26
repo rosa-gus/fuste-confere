@@ -1,8 +1,8 @@
-Project Conferidor
-Copyright 2026 rosa gus
+Fuste
+Copyright 2026 Rosa Gus
 https://rosa-gus.github.io/portfolio/
 
-Project Conferidor is licensed under the Apache License, Version 2.0.
+Fuste is licensed under the Apache License, Version 2.0.
 
 Third-party software and fonts retain their original licenses and notices:
 
@@ -42,4 +42,4 @@ SIL Open Font License, Version 1.1
 License: fonts/OFL.txt in the web distribution.
 
 In the source tree, the web distribution's license files are located under
-web/public. Third-party notices do not change the license of Project Conferidor.
+web/public. Third-party notices do not change the license of Fuste.

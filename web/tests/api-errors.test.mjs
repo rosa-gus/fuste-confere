@@ -42,5 +42,23 @@ test("title-only and non-JSON errors have readable messages without a translatio
 test("network failures receive a local Portuguese message without exposing transport errors", async () => {
   const { api } = client(async () => { throw new Error("fetch failed"); });
   await assert.rejects(api.listCompanies(), (error) => error.status === 0
-    && error.message === "Não foi possível conectar ao Project Conferidor. Confira se a API está em execução.");
+    && error.message === "Não foi possível conectar ao Fuste. Confira se a API está em execução.");
+});
+
+test("reconciliation export downloads the CSV bytes without decoding them as JSON", async () => {
+  const csv = new Blob([new Uint8Array([0xef, 0xbb, 0xbf]), "ID;Situação\r\n0001;Conferido\r\n"]);
+  const { api } = client(async (path, options) => {
+    assert.equal(path, "/api/reconciliations/saved-id/export");
+    assert.equal(options.cache, "no-store");
+    return new Response(csv, { headers: { "Content-Type": "text/csv; charset=utf-8" } });
+  });
+  assert.deepEqual(await (await api.exportReconciliation("saved-id")).arrayBuffer(), await csv.arrayBuffer());
+});
+
+test("reconciliation export surfaces API failures and rejects HTML returned with HTTP 200", async () => {
+  const detail = "A conferência solicitada não foi encontrada.";
+  const { api } = client(async () => new Response(JSON.stringify({ detail }), { status: 404 }));
+  await assert.rejects(api.exportReconciliation("missing"), (error) => error.status === 404 && error.message === detail);
+  const misconfigured = client(async () => new Response("<html></html>", { headers: { "Content-Type": "text/html" } }));
+  await assert.rejects(misconfigured.api.exportReconciliation("saved-id"), /A API não retornou um arquivo CSV/);
 });

@@ -1,8 +1,10 @@
 <script lang="ts">
   import SectionHeader from "./SectionHeader.svelte";
-  import { Button, Divider, Pagination, Search, Select, SelectItem, Tag, TextInput } from "carbon-components-svelte";
+  import { Button, Divider, InlineNotification, Pagination, Search, Select, SelectItem, Tag, TextInput } from "carbon-components-svelte";
+  import Download from "carbon-icons-svelte/lib/Download.svelte";
   import Filter from "carbon-icons-svelte/lib/Filter.svelte";
   import Information from "carbon-icons-svelte/lib/Information.svelte";
+  import { api, ApiError } from "../api";
   import { formatCurrency, formatDate, formatDateTime, formatDifference, formatPercentage, statusLabels } from "../format";
   import { filterResultLines, paginateResultLines, validateResultFilters, type AmountField, type ResultFilters } from "../reconciliation-results";
   import type { Reconciliation, ReconciliationStatus } from "../types";
@@ -18,6 +20,8 @@
   let showFilters = $state(false);
   let page = $state(1);
   let pageSize = $state(25);
+  let downloading = $state(false);
+  let downloadError = $state("");
 
   const statuses = Object.entries(statusLabels) as [ReconciliationStatus, string][];
   const filters = $derived<ResultFilters>({ search, status, dateFrom, dateTo, amountField, minimum, maximum });
@@ -46,6 +50,31 @@
     page = 1;
   }
 
+  async function downloadCsv(): Promise<void> {
+    if (downloading) return;
+    downloading = true;
+    downloadError = "";
+    const { id } = reconciliation;
+    try {
+      const csv = await api.exportReconciliation(id);
+      const url = URL.createObjectURL(csv);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `conferencia-${id}.csv`;
+      document.body.append(link);
+      try {
+        link.click();
+      } finally {
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+    } catch (error) {
+      downloadError = error instanceof ApiError ? error.message : "O download falhou. Tente novamente.";
+    } finally {
+      downloading = false;
+    }
+  }
+
   function statusTagType(value: ReconciliationStatus): "green" | "red" | "cool-gray" | "blue" | "purple" {
     switch (value) {
       case "Matched": return "green";
@@ -65,7 +94,16 @@
     headingId="results-title"
   >
     {#snippet titleEnd()}<span class="result-date">{formatDateTime(reconciliation.createdAt)}</span>{/snippet}
+    {#snippet actions()}
+      <Button kind="tertiary" size="field" icon={Download} disabled={downloading} onclick={downloadCsv}>
+        {downloading ? "Preparando CSV…" : "Baixar CSV"}
+      </Button>
+    {/snippet}
   </SectionHeader>
+
+  {#if downloadError}
+    <InlineNotification kind="error" title="Não foi possível baixar o CSV" subtitle={downloadError} hideCloseButton />
+  {/if}
 
   <div class="results-toolbar">
     <div class="results-search">

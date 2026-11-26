@@ -1,4 +1,4 @@
-const appNamespace = "conferidor";
+const appNamespace = "fuste-confere";
 
 /**
  * Builds a key using `app:version:key`. The version describes this key's
@@ -6,7 +6,7 @@ const appNamespace = "conferidor";
  * Increment it when the stored format becomes incompatible.
  *
  * @example
- * const key = createStorageKey("ui-theme", 1); // conferidor:v1:ui-theme
+ * const key = createStorageKey("ui-theme", 1); // fuste-confere:v1:ui-theme
  * localStorage.setItem(key, "g10");
  * cleanupStorageKeys(localStorage);
  * const theme = localStorage.getItem(key);

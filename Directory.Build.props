@@ -3,8 +3,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Authors>rosa gus</Authors>
-    <Copyright>Copyright 2026 rosa gus</Copyright>
+    <Authors>Rosa Gus</Authors>
+    <Copyright>Copyright 2026 Rosa Gus</Copyright>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
   </PropertyGroup>
 </Project>

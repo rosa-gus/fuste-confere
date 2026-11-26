@@ -1,5 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <ItemGroup>
-    <ProjectReference Include="../ProjectConferidor.Domain/ProjectConferidor.Domain.csproj" />
-  </ItemGroup>
-</Project>

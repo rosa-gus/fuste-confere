@@ -7,7 +7,9 @@ Uses only the Python standard library. Never connects to an existing API.
 import argparse
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
+import csv
 from decimal import Decimal
+from io import StringIO
 import json
 import os
 from pathlib import Path
@@ -41,13 +43,13 @@ class Api:
         self.process = None
 
     def start(self):
-        dll = ROOT / "src/ProjectConferidor.Api/bin/Debug/net10.0/ProjectConferidor.Api.dll"
-        check(dll.exists(), "Build the API first: dotnet build src/ProjectConferidor.Api")
-        env = {**os.environ, "PROJECT_CONFERIDOR_DATA_DIR": self.directory,
+        dll = ROOT / "src/Fuste.Api/bin/Debug/net10.0/Fuste.Api.dll"
+        check(dll.exists(), "Build the API first: dotnet build src/Fuste.Api")
+        env = {**os.environ, "FUSTE_CONFERE_DATA_DIR": self.directory,
                "ASPNETCORE_ENVIRONMENT": "Production"}
         self.process = subprocess.Popen(
             ["dotnet", str(dll), "--urls", self.base],
-            cwd=ROOT / "src/ProjectConferidor.Api", env=env,
+            cwd=ROOT / "src/Fuste.Api", env=env,
             stdout=self.log, stderr=subprocess.STDOUT,
         )
         deadline = time.monotonic() + 30
@@ -104,7 +106,25 @@ class Api:
             body = response.read()
             check(response.status in (status if isinstance(status, tuple) else (status,)),
                   f"{method} {path}: expected HTTP {status}, got {response.status}: {body[:1000]!r}")
-        return body if raw else json.loads(body, parse_float=Decimal) if body else None
+        return (response.headers, body) if raw else json.loads(body, parse_float=Decimal) if body else None
+
+    def export(self, reconciliation):
+        reconciliation_id = reconciliation["id"]
+        headers, body = self.request("GET", f"/api/reconciliations/{reconciliation_id}/export", raw=True)
+        check(headers.get_content_type() == "text/csv" and headers.get_content_charset() == "utf-8",
+              "Wrong CSV content type")
+        check(headers.get_content_disposition() == "attachment"
+              and headers.get_filename() == f"conferencia-{reconciliation_id}.csv", "Wrong CSV attachment filename")
+        check(body.startswith(b"\xef\xbb\xbf"), "CSV must start with a UTF-8 BOM")
+        return body
+
+
+def read_export(body):
+    source = StringIO(body.decode("utf-8-sig"), newline="")
+    reader = csv.reader(source, delimiter=";", strict=True)
+    check(next(reader) == ["ID da venda", "Data da venda", "Valor bruto", "Comissão (%)",
+                           "Comissão esperada", "Comissão informada", "Diferença", "Situação"], "Wrong CSV header")
+    return list(reader)
 
 
 def run(api, passed):
@@ -112,8 +132,11 @@ def run(api, passed):
         passed.append(name)
         print(f"PASS {name}", flush=True)
 
-    html = api.request("GET", "/", raw=True)
+    _, html = api.request("GET", "/", raw=True)
     check(b'<div id="app">' in html and b"/assets/" in html, "Built frontend not served")
+    check(b"<title>Fuste</title>" in html and api.request("GET", "/health")["application"] == "Fuste",
+          "Frontend or API still reports the former product name")
+    check((Path(api.directory) / "fuste-confere.db").is_file(), "Fresh installation did not use the new database filename")
     check(api.request("GET", "/api/companies") == [], "Temporary database must start empty")
     company = api.request("POST", "/api/companies", {"name": "E2E Aurora"})
     other = api.request("POST", "/api/companies", {"name": "E2E Outra empresa"})
@@ -160,6 +183,34 @@ def run(api, passed):
               f"Wrong configured line: {sale}")
     done("mapped preview without writes, reusable profile, mixed formats and leading-zero IDs")
 
+    monthly_csv = api.export(result)
+    monthly_rows = read_export(monthly_csv)
+    check(len(monthly_rows) == 53, "Monthly CSV must have 53 data rows")
+    labels = {"Matched": "Conferido", "Difference": "Divergência",
+              "MissingFromStatement": "Sem registro no demonstrativo",
+              "UnrecognizedSale": "Venda não localizada", "MissingAgreement": "Sem acordo vigente"}
+    for row, line in zip(monthly_rows, lines, strict=True):
+        check(len(row) == 8 and row[0] == line["saleExternalId"], "CSV identifiers or ordering changed")
+        date = "/".join(reversed(line["saleDate"].split("-"))) if line["saleDate"] else ""
+        check(row[1] == date and row[7] == labels[line["status"]], f"Wrong date or status: {row[0]}")
+        for index, field in [(2, "grossAmount"), (4, "expectedCommission"), (5, "reportedCommission"), (6, "difference")]:
+            value = line[field]
+            expected_value = f"{value:.2f}".replace(".", ",") if value is not None else ""
+            check(row[index] == expected_value, f"Wrong CSV {field}: {row[0]}")
+        check((Decimal(row[3].replace(",", ".")) if row[3] else None) == line["commissionPercentage"],
+              f"Wrong CSV percentage: {row[0]}")
+    configured_csv = api.export(configured)
+    check({row[0]: row[1:] for row in read_export(configured_csv)} == {
+        "0001": ["01/03/2026", "1000,00", "5", "50,00", "50,00", "0,00", "Conferido"],
+        "0002": ["16/03/2026", "200,00", "5,5", "11,00", "10,00", "1,00", "Divergência"],
+        "0003": ["17/03/2026", "300,00", "5,5", "16,50", "", "", "Sem registro no demonstrativo"],
+        "0004": ["28/02/2026", "100,00", "", "", "", "", "Sem acordo vigente"],
+        "0099": ["", "", "", "", "7,00", "", "Venda não localizada"],
+    }, "Wrong custom CSV data")
+    missing = api.request("GET", f"/api/reconciliations/{uuid.uuid4()}/export", status=404)
+    check(missing["detail"] == "A conferência solicitada não foi encontrada.", "Missing CSV error was not localized")
+    done("CSV attachment and all values, statuses, ordering, leading-zero IDs and empty fields")
+
     for name, marker in [("duplicate-sales.csv", "repete o identificador"), ("invalid-date-sales.csv", "data da venda é inválida"),
                          ("invalid-amount-sales.csv", "valor bruto é inválido")]:
         failure = api.request("POST", path + "/reconciliations",
@@ -182,9 +233,30 @@ def run(api, passed):
     api.start()
     check(api.request("GET", f'/api/reconciliations/{result["id"]}') == result, "Monthly snapshot changed after restart")
     check(api.request("GET", f'/api/reconciliations/{configured["id"]}') == configured, "Configured snapshot changed after restart")
+    check(api.export(result) == monthly_csv and api.export(configured) == configured_csv,
+          "Saved exports changed after restart")
     check(api.request("GET", path + "/import-profiles") == profiles, "Profiles changed after restart")
     check(len(api.request("GET", path + "/reconciliations")) == 2, "History changed after restart")
     done("company isolation and exact history/profile preservation after API restart")
+
+    other_path = f'/api/companies/{other["id"]}'
+    api.request("POST", other_path + "/agreements", {"effectiveFrom": "2026-03-01", "percentage": 5.123456789})
+    complex_id = 'VEN;"A"\nB'
+    formula_id = "=1+1"
+    with tempfile.TemporaryDirectory(prefix="fuste-e2e-export-") as directory:
+        sales, statement = Path(directory) / "sales.csv", Path(directory) / "statement.csv"
+        with sales.open("w", encoding="utf-8", newline="") as file:
+            csv.writer(file).writerows([
+                ["sale_id", "sale_date", "gross_amount"],
+                [complex_id, "2026-03-01", "100.00"],
+                [formula_id, "2026-03-01", "100.00"],
+            ])
+        statement.write_text("sale_id,commission_amount\n=1+1,5.12\n", encoding="utf-8")
+        special = api.request("POST", other_path + "/reconciliations", files={"sales": sales, "statement": statement})
+    special_rows = {row[0]: row for row in read_export(api.export(special))}
+    check(set(special_rows) == {complex_id, "'" + formula_id}, "CSV quoting or formula protection failed")
+    check(all(row[3] == "5,123456789" for row in special_rows.values()), "CSV rounded a saved percentage")
+    done("CSV quoting, formula protection and saved percentage precision")
 
     # Reimport contract exercised over real HTTP, independently of baseline history.
     repeated_company = api.request("POST", "/api/companies", {"name": "E2E Reimports"})
@@ -193,13 +265,14 @@ def run(api, passed):
     files = {"sales": ROOT / "samples/sales.csv", "statement": ROOT / "samples/statement.csv"}
     initial_fields = {"requestId": str(uuid.uuid4())}
     initial = api.request("POST", repeated_path + "/reconciliations", files=files, fields=initial_fields)
+    initial_csv = api.export(initial)
     check(api.request("POST", repeated_path + "/reconciliations", files=files, fields=initial_fields) == initial,
           "Repeated HTTP request did not return its original result")
     conflict = api.request("POST", repeated_path + "/reconciliations", files=files, status=409)
     check(conflict["code"] == "duplicate_import" and conflict["existingReconciliation"]["id"] == initial["id"],
           "Duplicate HTTP response lacks previous reconciliation")
     check(len(api.request("GET", repeated_path + "/reconciliations")) == 1, "Conflict saved extra history")
-    with tempfile.TemporaryDirectory(prefix="conferidor-e2e-size-") as oversized_dir:
+    with tempfile.TemporaryDirectory(prefix="fuste-e2e-size-") as oversized_dir:
         oversized = Path(oversized_dir) / "oversized.csv"
         oversized.write_bytes(b"x" * (9 * 1024 * 1024 + 1))
         api.request("POST", repeated_path + "/reconciliations",
@@ -220,6 +293,7 @@ def run(api, passed):
     check(api.request("GET", f'/api/reconciliations/{initial["id"]}') == initial, "Reprocessing changed prior result")
     api.stop()
     api.start()
+    check(api.export(initial) == initial_csv, "Export used changed agreements instead of the saved result")
     check(api.request("POST", repeated_path + "/reconciliations", files=files, fields=fields) == repeated,
           "Confirmed retry after restart created another result")
     mismatch = api.request("POST", repeated_path + "/reconciliations", files=files,
@@ -286,7 +360,7 @@ def main():
     args = parser.parse_args()
     passed = []
     failure = None
-    with tempfile.TemporaryDirectory(prefix="conferidor-e2e-") as directory:
+    with tempfile.TemporaryDirectory(prefix="fuste-e2e-") as directory:
         with tempfile.TemporaryFile(mode="w+b") as log:
             api = Api(directory, log)
             try:

@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../Fuste.Domain/Fuste.Domain.csproj" />
+  </ItemGroup>
+</Project>
