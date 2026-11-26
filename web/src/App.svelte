@@ -544,7 +544,7 @@
 <svelte:window ondragover={preventOutsideFileDrop} ondrop={preventOutsideFileDrop} ondragend={clearFileDrag} />
 
 <svelte:head>
-  <title>Fuste — conferência de comissões</title>
+  <title>Fuste | conferência de comissões</title>
   <meta
     name="description"
     content="Confira com clareza as comissões sobre suas vendas."

@@ -71,6 +71,15 @@ git push origin "$tag"
 2. Escreva notas curtas com as mudanças, as plataformas testadas e as instruções de atualização ou backup, quando aplicáveis.
 3. Anexe os pacotes validados e seus arquivos `.sha256` ao rascunho. Publique a release e confira os arquivos em **Assets**. Para o canal de atualizações do Fuste, use uma release regular de versão superior, com um pacote cujo nome corresponda à plataforma. [Publicação de releases no GitHub](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository#creating-a-release)
 
+## Remover o Fuste
+
+1. Pare o Fuste com `Ctrl+C` no terminal em que ele está rodando.
+2. Exclua a pasta extraída que contém `Fuste.Api` no Linux ou `Fuste.Api.exe` no Windows. Se quiser liberar mais espaço, exclua também o arquivo do pacote e seu checksum. O histórico fica na pasta de dados.
+3. Se quiser apagar o histórico e os demais dados, faça um backup se precisar recuperá-los. Depois, com o Fuste parado, remova `fuste-confere.db` e os arquivos auxiliares `-wal`, `-shm` e `-journal`, se existirem. Use a pasta indicada em `FUSTE_CONFERE_DATA_DIR` ou a pasta padrão, normalmente `~/.local/share/Fuste` no Linux e `%LOCALAPPDATA%\Fuste` no Windows. [Dados locais e backup](../README.md#dados-locais-e-backup)
+4. Para remover também as preferências do navegador, apague as chaves que começam com `fuste-confere:` no armazenamento local do endereço em que você usava o Fuste.
+
+Para limpar apenas o banco e continuar usando o Fuste, abra **Opções → Banco de dados → Redefinir banco de dados**.
+
 ## Checks da main
 
 Na proteção da `main`, exija pull request e os checks **CI (Linux x64)** e **CI (Windows x64)** após a primeira execução. O workflow **Packages** roda depois do merge e disponibiliza artefatos para revisão e publicação manual.
