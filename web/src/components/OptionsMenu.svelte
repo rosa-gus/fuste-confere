@@ -7,6 +7,20 @@
   import SettingsAdjust from "carbon-icons-svelte/lib/SettingsAdjust.svelte";
   import CheckmarkFilled from "carbon-icons-svelte/lib/CheckmarkFilled.svelte";
   import { applyTheme, currentTheme, themes, type ThemeId } from "../themes";
+  import { formatDateTime } from "../format";
+  import type { UpdateStatus } from "../types";
+  import packageJson from "../../package.json";
+
+  let { updates, updatesError, installedVersion, onOpen }: {
+    updates: UpdateStatus | null;
+    updatesError: boolean;
+    installedVersion: string;
+    onOpen: () => Promise<void>;
+  } = $props();
+  const updateAvailable = $derived(!updatesError && updates?.status === "updateAvailable");
+  const releaseBase = `${packageJson.source}/releases/`;
+  const releaseUrl = $derived(!updatesError && updates?.releaseUrl?.startsWith(releaseBase + "tag/") ? updates.releaseUrl : null);
+  const downloadUrl = $derived(updateAvailable && updates?.downloadUrl?.startsWith(releaseBase + "download/") ? updates.downloadUrl : null);
 
   let open = $state(false);
   let selected = $state<ThemeId>(currentTheme());
@@ -48,6 +62,8 @@
   async function toggle(): Promise<void> {
     open = !open;
     if (open) {
+      if (updateAvailable) activeTab = 3;
+      void onOpen();
       await tick();
       container.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus();
     }
@@ -86,7 +102,7 @@
     aria-controls="application-options"
     onclick={toggle}
   >
-    Opções <SettingsAdjust size={16} />
+    {updateAvailable ? "Atualização disponível" : "Opções"} <SettingsAdjust size={16} />
   </button>
 
   {#if open}
@@ -99,6 +115,7 @@
               <Tab label="Aparência" />
               <Tab label="Conexão" />
               <Tab label="Banco de dados" />
+              <Tab label="Atualizações" />
             </Tabs>
           </svelte:fragment>
           <TabContent flush>
@@ -178,6 +195,39 @@
                   Redefinir banco de dados
                 </Button>
               </div>
+            </div>
+          </TabContent>
+          <TabContent flush>
+            <div class="options-tab-body database-options">
+              <div role="status">
+                <p>Versão instalada: <strong>v{installedVersion}</strong></p>
+                {#if updatesError || updates?.status === "unavailable"}
+                  <p class="options-description">Não foi possível verificar atualizações.</p>
+                {:else if !updates || updates.status === "checking"}
+                  <p class="options-description">Verificando atualizações…</p>
+                {:else if updates.status === "disabled"}
+                  <p class="options-description">Verificação de atualizações desativada nesta instalação.</p>
+                {:else if updates.status === "upToDate"}
+                  <p class="options-description">O Fuste está em dia.</p>
+                {:else if updates.status === "incompatible"}
+                  <p class="options-description">A versão v{updates.availableVersion} ainda não tem pacote para {updates.rid}.</p>
+                {:else}
+                  <p class="options-description">A versão v{updates.availableVersion} está disponível para {updates.rid}.</p>
+                {/if}
+                {#if updates?.lastCheckedAt}
+                  <p class="options-description">Última verificação em {formatDateTime(updates.lastCheckedAt)}.</p>
+                {/if}
+              </div>
+              {#if releaseUrl}
+                <div class="inline-metadata">
+                  {#if downloadUrl}
+                    <Button size="small" href={downloadUrl} target="_blank" rel="noopener noreferrer">Baixar atualização</Button>
+                  {/if}
+                  <Button kind="ghost" size="small" href={releaseUrl} target="_blank" rel="noopener noreferrer">
+                    Ver notas da versão
+                  </Button>
+                </div>
+              {/if}
             </div>
           </TabContent>
         </PageHeader>

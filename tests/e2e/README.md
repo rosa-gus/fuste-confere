@@ -14,6 +14,8 @@ dotnet build src/Fuste.Api
 python3 tests/e2e/run.py --report /tmp/fuste-e2e-report.json
 ```
 
+Para testar um pacote extraído, passe `--package-dir`, `--package-version` e `--package-rid`. O workflow **Packages** usa esse modo para executar o binário no sistema correspondente e conferir os metadados de atualização. A suíte desativa as consultas externas ao GitHub.
+
 O script `run.py` usa a compilação **Debug/net10.0**, inicia uma instância da API acessível apenas neste computador, em uma porta escolhida pelo sistema, e cria uma pasta temporária para os dados. Ao terminar, encerra o processo e remove essa pasta. O banco de uma instalação existente é preservado.
 
 Cada grupo de cenários aprovado imprime uma linha `PASS`. Se algum cenário falhar, o script imprime `FAIL`, mostra o log da API e termina com código 1. O relatório JSON lista os grupos aprovados e o erro, quando houver; `failure: null` indica que todos passaram. A opção `--report` é opcional e aceita outro caminho, desde que a pasta de destino exista. O caminho `/tmp` dos exemplos é adequado a Linux e macOS.

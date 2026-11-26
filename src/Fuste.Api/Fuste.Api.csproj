@@ -5,6 +5,10 @@
     <ProjectReference Include="../Fuste.Infrastructure/Fuste.Infrastructure.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <AssemblyMetadata Include="FusteReleaseRid" Value="$(RuntimeIdentifier)" Condition="'$(RuntimeIdentifier)' != ''" />
+    <InternalsVisibleTo Include="Fuste.Updates.Checks" />
+  </ItemGroup>
+  <ItemGroup>
     <Content Include="../../LICENSE" Link="LICENSE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="../../NOTICE" Link="NOTICE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="../../licenses/*.txt" Link="licenses/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

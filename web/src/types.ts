@@ -104,3 +104,13 @@ export interface ImportPreview {
   isValid: boolean;
   validationComplete: boolean;
 }
+
+export interface UpdateStatus {
+  status: "disabled" | "checking" | "upToDate" | "updateAvailable" | "incompatible" | "unavailable";
+  installedVersion: string | null;
+  rid: string | null;
+  lastCheckedAt: string | null;
+  availableVersion: string | null;
+  releaseUrl: string | null;
+  downloadUrl: string | null;
+}

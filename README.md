@@ -53,6 +53,10 @@ Quando um valor está indisponível, o CSV de resultados deixa o campo em branco
 
 O histórico preserva os valores e o percentual usados em cada execução. Ao reenviar arquivos idênticos para a mesma empresa, com a mesma configuração, o Fuste permite abrir o resultado anterior ou confirmar uma nova execução com os acordos atuais. A nova conferência mantém a anterior no histórico.
 
+### Atualizações
+
+Em **Opções → Atualizações**, consulte a versão instalada e os links de download e notas quando houver um pacote mais novo para a plataforma. Os pacotes oficiais consultam o GitHub Releases ao iniciar e a cada 12 horas. A instalação é manual. Para desativar a consulta, inicie o Fuste com `FusteUpdates__Enabled=false`.
+
 ## Dados locais e backup
 
 Por padrão, o Fuste usa o arquivo `fuste-confere.db` na pasta `Fuste` do diretório de dados locais do usuário. Defina `FUSTE_CONFERE_DATA_DIR` para escolher outra pasta.
@@ -76,12 +80,15 @@ Para editar a interface, mantenha a API em execução e rode `npm --prefix web r
 ```sh
 dotnet build fuste-confere.slnx
 dotnet run --project tests/Fuste.Persistence.Checks
+dotnet run --project tests/Fuste.Updates.Checks
 npm --prefix web run web:test
 npm --prefix web run web:typecheck
 python3 tests/e2e/run.py
 ```
 
 A suíte HTTP usa um banco temporário. Gere a interface e compile a solução antes de executá-la. O [guia de validação](tests/e2e/README.md) inclui cenários automatizados e o roteiro de aceite pelo navegador.
+
+Para gerar e publicar pacotes, siga o [guia de release](docs/RELEASE.md).
 
 ## Licença
 
