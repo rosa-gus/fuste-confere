@@ -32,7 +32,7 @@ def check(condition, message):
 
 
 class Api:
-    def __init__(self, directory, log):
+    def __init__(self, directory, log, package_dir=None):
         # Loopback port chosen by the OS; readiness also verifies process ownership.
         with socket.socket() as sock:
             sock.bind(("127.0.0.1", 0))
@@ -41,15 +41,24 @@ class Api:
         self.directory = directory
         self.log = log
         self.process = None
+        self.package_dir = package_dir
 
     def start(self):
-        dll = ROOT / "src/Fuste.Api/bin/Debug/net10.0/Fuste.Api.dll"
-        check(dll.exists(), "Build the API first: dotnet build src/Fuste.Api")
+        if self.package_dir is None:
+            working_dir = ROOT / "src/Fuste.Api"
+            dll = working_dir / "bin/Debug/net10.0/Fuste.Api.dll"
+            check(dll.is_file(), "Build the API first: dotnet build src/Fuste.Api")
+            command = ["dotnet", str(dll)]
+        else:
+            working_dir = self.package_dir
+            executable = working_dir / ("Fuste.Api.exe" if os.name == "nt" else "Fuste.Api")
+            check(executable.is_file(), f"Packaged executable missing: {executable}")
+            command = [str(executable)]
         env = {**os.environ, "FUSTE_CONFERE_DATA_DIR": self.directory,
-               "ASPNETCORE_ENVIRONMENT": "Production"}
+               "ASPNETCORE_ENVIRONMENT": "Production", "FusteUpdates__Enabled": "false"}
         self.process = subprocess.Popen(
-            ["dotnet", str(dll), "--urls", self.base],
-            cwd=ROOT / "src/Fuste.Api", env=env,
+            [*command, "--urls", self.base],
+            cwd=working_dir, env=env,
             stdout=self.log, stderr=subprocess.STDOUT,
         )
         deadline = time.monotonic() + 30
@@ -127,7 +136,7 @@ def read_export(body):
     return list(reader)
 
 
-def run(api, passed):
+def run(api, passed, package_version=None, package_rid=None):
     def done(name):
         passed.append(name)
         print(f"PASS {name}", flush=True)
@@ -136,6 +145,9 @@ def run(api, passed):
     check(b'<div id="app">' in html and b"/assets/" in html, "Built frontend not served")
     check(b"<title>Fuste</title>" in html and api.request("GET", "/health")["application"] == "Fuste",
           "Frontend or API still reports the former product name")
+    updates = api.request("GET", "/api/updates")
+    check(updates["status"] == "disabled" and updates["installedVersion"] == package_version
+          and updates["rid"] == package_rid, "Incorrect update metadata for the tested build")
     check((Path(api.directory) / "fuste-confere.db").is_file(), "Fresh installation did not use the new database filename")
     check(api.request("GET", "/api/companies") == [], "Temporary database must start empty")
     company = api.request("POST", "/api/companies", {"name": "E2E Aurora"})
@@ -143,7 +155,7 @@ def run(api, passed):
     path = f'/api/companies/{company["id"]}'
     for date, percentage in [("2026-03-01", 5), ("2026-03-16", 5.5)]:
         api.request("POST", path + "/agreements", {"effectiveFrom": date, "percentage": percentage})
-    done("initial state, frontend delivery, companies and effective agreements")
+    done("initial state, frontend delivery, update metadata, companies and effective agreements")
 
     example = {"sales": ROOT / "example/sales.csv", "statement": ROOT / "example/statement.csv"}
     result = api.request("POST", path + "/reconciliations", files=example)
@@ -357,15 +369,21 @@ def run(api, passed):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--report", type=Path, help="Write a JSON execution report")
+    parser.add_argument("--package-dir", type=Path, help="Test an extracted package instead of the Debug build")
+    parser.add_argument("--package-version", help="Expected version embedded in the package")
+    parser.add_argument("--package-rid", help="Expected runtime identifier embedded in the package")
     args = parser.parse_args()
+    package_args = (args.package_dir, args.package_version, args.package_rid)
+    if any(package_args) and not all(package_args):
+        parser.error("--package-dir, --package-version and --package-rid must be used together")
     passed = []
     failure = None
     with tempfile.TemporaryDirectory(prefix="fuste-e2e-") as directory:
         with tempfile.TemporaryFile(mode="w+b") as log:
-            api = Api(directory, log)
+            api = Api(directory, log, args.package_dir.resolve() if args.package_dir else None)
             try:
                 api.start()
-                run(api, passed)
+                run(api, passed, args.package_version, args.package_rid)
             except Exception as error:
                 failure = str(error)
                 print(f"FAIL {failure}", flush=True)

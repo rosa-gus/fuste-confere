@@ -47,6 +47,7 @@
     HistoryDeletionTarget,
     ImportConfiguration,
     Reconciliation,
+    UpdateStatus,
   } from "./types";
 
   function todayLocal(): string {
@@ -62,6 +63,9 @@
   let selectedCompanyId = $state("");
   let loading = $state(true);
   let apiStatus = $state<"checking" | "connected" | "disconnected">("checking");
+  let updates = $state<UpdateStatus | null>(null);
+  let updatesError = $state(false);
+  let fetchingUpdates = false;
   let workspaceLoading = $state(false);
   let creatingCompany = $state(false);
   let savingAgreement = $state(false);
@@ -155,12 +159,26 @@
   onMount(() => {
     void initialize();
     void refreshApiStatus();
-    const healthCheckInterval = window.setInterval(
-      () => void refreshApiStatus(),
-      30_000,
-    );
-    return () => window.clearInterval(healthCheckInterval);
+    void refreshUpdates();
+    const statusInterval = window.setInterval(() => {
+      void refreshApiStatus();
+      void refreshUpdates();
+    }, 30_000);
+    return () => window.clearInterval(statusInterval);
   });
+
+  async function refreshUpdates(): Promise<void> {
+    if (fetchingUpdates) return;
+    fetchingUpdates = true;
+    try {
+      updates = await api.getUpdates();
+      updatesError = false;
+    } catch {
+      updatesError = true;
+    } finally {
+      fetchingUpdates = false;
+    }
+  }
 
   async function refreshApiStatus(): Promise<void> {
     try {
@@ -588,7 +606,8 @@
     </div>
     <Tag type="blue" size="default">MVP</Tag>
     </div>
-    <OptionsMenu />
+    <OptionsMenu {updates} {updatesError} installedVersion={updates?.installedVersion ?? packageJson.version}
+      onOpen={refreshUpdates} />
   </header>
 
   <main id="inicio" class="page-content">
@@ -1074,7 +1093,7 @@
           {getApiSettings().useLocal ? "Armazenamento local" : "Armazenamento na API"}
         </div>
       </div>
-      <span class="footer-version"><Tag type="purple" size="sm">v{packageJson.version}</Tag></span>
+      <span class="footer-version"><Tag type="purple" size="sm">v{updates?.installedVersion ?? packageJson.version}</Tag></span>
     </div>
     <div class="footer-credits-row">
       <div class="footer-credits">
@@ -1082,7 +1101,7 @@
         <Divider orientation="vertical" decorative class="inline-separator footer-credits-separator" margin="0" />
         <span class="footer-license">Licenciado sob <a href="/LICENSE.txt" target="_blank" rel="noopener noreferrer" aria-label="Licença Apache-2.0 (abre em nova aba)">{packageJson.license}</a></span>
       </div>
-      <a class="footer-github" href={packageJson.source} target="_blank" rel="noopener noreferrer" aria-label="Perfil de Rosa Gus no GitHub (abre em nova aba)">
+      <a class="footer-github" href={packageJson.source} target="_blank" rel="noopener noreferrer" aria-label="Repositório do Fuste no GitHub (abre em nova aba)">
         GitHub <Launch size={16} aria-hidden="true" />
       </a>
     </div>

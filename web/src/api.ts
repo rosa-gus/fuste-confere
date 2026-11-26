@@ -7,6 +7,7 @@ import type {
   ImportProfile,
   ProblemDetails,
   Reconciliation,
+  UpdateStatus,
 } from "./types";
 
 export class ApiError extends Error {
@@ -55,6 +56,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   health: () => request<{ status: string }>("/health", { cache: "no-store" }),
+  getUpdates: () => request<UpdateStatus>("/api/updates", { cache: "no-store" }),
 
   resetDatabase: () => request<void>("/api/database/reset", {
     method: "POST",

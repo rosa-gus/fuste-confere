@@ -1,0 +1,82 @@
+name: Packages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    if: github.ref == 'refs/heads/main'
+    name: Package (${{ matrix.rid }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            rid: linux-x64
+            extension: tar.gz
+          - runner: windows-latest
+            rid: win-x64
+            extension: zip
+    env:
+      FUSTE_RID: ${{ matrix.rid }}
+      FUSTE_EXTENSION: ${{ matrix.extension }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.13'
+      - name: Install frontend dependencies
+        run: npm --prefix web ci
+      - name: Build frontend
+        run: npm --prefix web run build
+      - name: Publish, archive, and test the package
+        shell: pwsh
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          $version = (Get-Content web/package.json -Raw | ConvertFrom-Json).version
+          if ($version -cnotmatch '\A(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\z') {
+            throw "The package version must use MAJOR.MINOR.PATCH."
+          }
+          $package = "fuste-confere-v$version-$env:FUSTE_RID"
+          $fileName = "$package.$env:FUSTE_EXTENSION"
+          $stagingDir = Join-Path $env:RUNNER_TEMP 'fuste-stage'
+          $publishedDir = Join-Path $stagingDir $package
+          $artifactsDir = Join-Path $env:RUNNER_TEMP 'fuste-artifacts'
+          $extractedDir = Join-Path $env:RUNNER_TEMP 'fuste-extracted'
+          New-Item -ItemType Directory -Path $artifactsDir, $extractedDir | Out-Null
+          $archive = Join-Path $artifactsDir $fileName
+
+          dotnet publish src/Fuste.Api/Fuste.Api.csproj -c Release -r $env:FUSTE_RID --self-contained true "-p:Version=$version" -o $publishedDir
+          if ($IsWindows) {
+            Compress-Archive -LiteralPath $publishedDir -DestinationPath $archive
+            Expand-Archive -LiteralPath $archive -DestinationPath $extractedDir
+          } else {
+            tar -C $stagingDir -czf $archive $package
+            tar -xzf $archive -C $extractedDir
+          }
+          $sha256 = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$sha256  $fileName" | Set-Content -LiteralPath "$archive.sha256" -Encoding ascii
+          python tests/e2e/run.py --package-dir (Join-Path $extractedDir $package) --package-version $version --package-rid $env:FUSTE_RID
+      - name: Upload validated archive and checksum
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: fuste-${{ matrix.rid }}-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/fuste-artifacts/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14

@@ -4,4 +4,5 @@
   <Project Path="src/Fuste.Infrastructure/Fuste.Infrastructure.csproj" />
   <Project Path="src/Fuste.Api/Fuste.Api.csproj" />
   <Project Path="tests/Fuste.Persistence.Checks/Fuste.Persistence.Checks.csproj" />
+  <Project Path="tests/Fuste.Updates.Checks/Fuste.Updates.Checks.csproj" />
 </Solution>

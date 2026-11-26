@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Fuste.Api.Updates;
 using Fuste.Application.Abstractions;
 using Fuste.Application.Agreements;
 using Fuste.Application.Companies;
@@ -46,6 +47,18 @@ builder.Services.AddScoped<CompanyUseCases>();
 builder.Services.AddScoped<AgreementUseCases>();
 builder.Services.AddScoped<ReconciliationUseCases>();
 builder.Services.AddScoped<DatabaseUseCases>();
+builder.Services.AddSingleton(UpdateInstallation.FromAssembly(typeof(Program).Assembly,
+    builder.Configuration.GetValue("FusteUpdates:Enabled", defaultValue: true)));
+builder.Services.AddHttpClient(nameof(UpdateChecker), client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(8);
+    client.MaxResponseContentBufferSize = 4 * 1024 * 1024;
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("Fuste-UpdateChecker/1.0");
+    client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
+    client.DefaultRequestHeaders.Add("X-GitHub-Api-Version", "2026-03-10");
+});
+builder.Services.AddSingleton<UpdateChecker>();
+builder.Services.AddHostedService(services => services.GetRequiredService<UpdateChecker>());
 
 var app = builder.Build();
 await repository.InitializeAsync(app.Lifetime.ApplicationStopping);
@@ -71,6 +84,11 @@ app.UseRouting();
 app.UseCors();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok", application = "Fuste" }));
+app.MapGet("/api/updates", (UpdateChecker updates, HttpResponse response) =>
+{
+    response.Headers.CacheControl = "no-store";
+    return Results.Ok(updates.Current);
+});
 
 app.MapPost("/api/database/reset", async (
     ResetDatabaseRequest request,

@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: CI (${{ matrix.platform }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            platform: Linux x64
+          - runner: windows-latest
+            platform: Windows x64
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.13'
+      - name: Install frontend dependencies
+        run: npm --prefix web ci
+      - name: Test frontend
+        run: npm --prefix web run web:test
+      - name: Type-check and build frontend
+        run: npm --prefix web run build
+      - name: Build .NET solution
+        run: dotnet build fuste-confere.slnx
+      - name: Check SQLite persistence
+        run: dotnet run --no-build --project tests/Fuste.Persistence.Checks
+      - name: Check update detection
+        run: dotnet run --no-build --project tests/Fuste.Updates.Checks
+      - name: Test HTTP application
+        run: python tests/e2e/run.py

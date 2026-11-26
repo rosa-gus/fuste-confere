@@ -11,3 +11,10 @@ fuste-confere.db-journal
 web/node_modules/
 web/dist/
 src/Fuste.Api/wwwroot/
+
+# Pacotes de distribuição do Fuste
+/fuste-confere-v*.tar.gz
+/fuste-confere-v*.zip
+/fuste-confere-v*.tar.gz.sha256
+/fuste-confere-v*.zip.sha256
+/fuste-confere-v*/
