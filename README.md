@@ -6,9 +6,29 @@
 
 O projeto está em fase de **MVP**. O fluxo principal está disponível, mas pode haver instabilidades e lacunas de funcionalidade. Consulte os [limites técnicos](#limites-técnicos) para verificar se o seu processo cabe no escopo atual.
 
-## Executar a partir do código-fonte
+## Instalar no Linux x64
 
-A primeira release ainda será publicada. Para usar o Fuste agora, execute-o a partir deste repositório.
+O pacote da v0.1.0 inclui o runtime do .NET e a interface web. Baixe o arquivo `.tar.gz`, o checksum `.sha256`, a assinatura `.tar.gz.asc` e a chave pública `fuste-release-key.asc` na [página da release v0.1.0](https://github.com/rosa-gus/fuste-confere/releases/tag/v0.1.0).
+
+No diretório dos downloads, confira o checksum e compare a impressão digital da chave com a indicada nas [notas da release](release-notes.md).
+
+```sh
+archive=fuste-confere-v0.1.0-linux-x64.tar.gz
+sha256sum -c "$archive.sha256"
+gpg --show-keys --fingerprint fuste-release-key.asc
+```
+
+```sh
+gpg --import fuste-release-key.asc &&
+  gpg --verify "$archive.asc" "$archive" &&
+  tar -xzf "$archive" &&
+  cd "${archive%.tar.gz}" &&
+  ./Fuste.Api
+```
+
+Abra [http://127.0.0.1:5080](http://127.0.0.1:5080) no navegador. Encerre o Fuste com `Ctrl+C` no terminal. Consulte [Dados locais e backup](#dados-locais-e-backup) para localizar o banco.
+
+## Executar a partir do código-fonte
 
 Você precisa do SDK do .NET 10, de uma versão do Node.js compatível com o Vite 8 (22.12+ na linha 22 ou 24, por exemplo) e do npm. Execute os comandos abaixo na raiz do repositório.
 
@@ -63,7 +83,7 @@ O histórico preserva os valores e o percentual usados em cada execução. Ao re
 
 ### Atualizações
 
-Em **Opções → Atualizações**, consulte a versão em uso. Na execução comum com `dotnet run`, a verificação fica desativada. Os pacotes Linux x64 e Windows x64 consultam o GitHub Releases ao iniciar e a cada 12 horas. Até a primeira release pública, esses pacotes exibem “Não foi possível verificar atualizações”.
+Em **Opções → Atualizações**, consulte a versão em uso. Nos pacotes compatíveis, o Fuste consulta o GitHub Releases ao iniciar e a cada 12 horas. Na execução comum com `dotnet run`, a verificação fica desativada.
 
 Quando uma versão mais recente oferece um pacote compatível, a tela mostra os links de download e das notas da versão. A instalação é manual. Para desativar a consulta em um pacote, inicie o Fuste com `FusteUpdates__Enabled=false`.
 
