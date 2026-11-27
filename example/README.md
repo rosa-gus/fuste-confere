@@ -9,7 +9,7 @@ Os CSVs usam UTF-8, ponto e vírgula como separador, valores como `12.680,40` e 
 
 ## Como experimentar
 
-1. Inicie a aplicação conforme o [guia de instalação](../README.md#instalação-e-execução).
+1. Inicie a aplicação conforme o [guia de execução a partir do código-fonte](../README.md#executar-a-partir-do-código-fonte).
 2. Cadastre uma nova empresa chamada `Aurora Distribuição de Materiais Ltda.`.
 3. Registre exatamente os acordos abaixo.
 4. Em **Nova conferência**, selecione `sales.csv` como vendas e `statement.csv` como demonstrativo de comissões.

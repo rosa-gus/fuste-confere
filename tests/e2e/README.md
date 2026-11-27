@@ -6,7 +6,7 @@ Os testes automatizados enviam requisições à aplicação e conferem as respos
 
 ## Executar a suíte HTTP
 
-Prepare o ambiente e instale as dependências conforme o [guia de instalação](../../README.md#instalação-e-execução). Você também precisará de Python 3.10 ou superior, sem pacotes Python adicionais. Execute os comandos abaixo na raiz do repositório:
+Prepare o ambiente e instale as dependências conforme o [guia de execução a partir do código-fonte](../../README.md#executar-a-partir-do-código-fonte). Você também precisará de Python 3.10 ou superior, sem pacotes Python adicionais. Execute os comandos abaixo na raiz do repositório:
 
 ```sh
 npm --prefix web run build
@@ -14,9 +14,9 @@ dotnet build src/Fuste.Api
 python3 tests/e2e/run.py --report /tmp/fuste-e2e-report.json
 ```
 
-Para testar um pacote extraído, passe `--package-dir`, `--package-version` e `--package-rid`. O workflow **Packages** usa esse modo para executar o binário no sistema correspondente e conferir os metadados de atualização. A suíte desativa as consultas externas ao GitHub.
+Para testar um pacote extraído, informe juntos `--package-dir`, `--package-version` e `--package-rid`. O workflow **Packages** roda nesse modo no Linux x64 e no Windows x64. A suíte executa o binário do pacote, verifica a versão e o RID informados pela API e percorre os mesmos cenários HTTP. A suíte desativa as consultas externas ao GitHub.
 
-O script `run.py` usa a compilação **Debug/net10.0**, inicia uma instância da API acessível apenas neste computador, em uma porta escolhida pelo sistema, e cria uma pasta temporária para os dados. Ao terminar, encerra o processo e remove essa pasta. O banco de uma instalação existente é preservado.
+Sem os argumentos de pacote, o script `run.py` usa a compilação **Debug/net10.0**. Em ambos os modos, inicia a API no endereço local, em uma porta escolhida pelo sistema, com uma pasta de dados temporária. Ao terminar, encerra o processo e remove essa pasta. O banco de uma instalação existente é preservado.
 
 Cada grupo de cenários aprovado imprime uma linha `PASS`. Se algum cenário falhar, o script imprime `FAIL`, mostra o log da API e termina com código 1. O relatório JSON lista os grupos aprovados e o erro, quando houver; `failure: null` indica que todos passaram. A opção `--report` é opcional e aceita outro caminho, desde que a pasta de destino exista. O caminho `/tmp` dos exemplos é adequado a Linux e macOS.
 
@@ -24,6 +24,7 @@ Execute também as verificações complementares:
 
 ```sh
 dotnet run --project tests/Fuste.Persistence.Checks
+dotnet run --project tests/Fuste.Updates.Checks
 npm --prefix web run web:test
 npm --prefix web run web:typecheck
 ```
@@ -114,7 +115,7 @@ Registre cada cenário como **aprovado**, **reprovado** ou **não executado**, i
 ## Cobertura e limitações
 
 - A identificação de reimportações compara os bytes dos arquivos e a configuração de leitura por empresa. Arquivos equivalentes com formatação diferente são considerados novos; consulte a seção de [reimportações](../../README.md#reimportações).
-- Os cenários cobrem importação, cálculo, histórico e exportação completa. Pacotes de distribuição, autenticação e backup/restauração ficam fora dessa cobertura.
+- A suíte HTTP cobre importação, cálculo, histórico e exportação completa no código compilado e nos pacotes extraídos. A atualização com um banco de versão anterior é uma verificação separada no [guia de release](../../docs/RELEASE.md#3-valide-os-pacotes). Backup e restauração ficam fora da suíte HTTP.
 - Os arquivos de referência representam layouts distintos, mas são fictícios. Para validar uma origem de dados usada na operação, repita o fluxo com exportações reais anonimizadas e confira os resultados esperados.
 - Os testes HTTP e o roteiro manual são complementares: as requisições verificam a API e a persistência, enquanto o roteiro verifica a interação no navegador.
 

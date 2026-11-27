@@ -137,7 +137,7 @@
                         style={`--preview-bg:${theme.background};--preview-layer:${theme.layer};--preview-text:${theme.text};--preview-border:${theme.border};--preview-accent:${theme.accent}`}
                         aria-hidden="true"
                       >
-                        <span class="preview-header"><i></i><b></b></span>
+                        <span class="preview-header" data-theme={theme.id}><b></b></span>
                         <span class="preview-body">
                           <span class="preview-sidebar"><i></i><i></i><i></i></span>
                           <span class="preview-content">

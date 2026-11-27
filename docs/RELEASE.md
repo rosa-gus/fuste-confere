@@ -1,8 +1,6 @@
 # Publicar uma release do Fuste
 
-O workflow **Packages** gera e testa os pacotes `linux-x64` e `win-x64` a cada push na `main`. No GitHub, abra a execução do commit que será marcado e baixe os ZIPs de **Artifacts**. Extraia de cada um o pacote e o arquivo `.sha256` para anexar à release. Use apenas arquivos da mesma execução. Os artefatos expiram em 14 dias.
-
-O fluxo manual abaixo usa Linux x64. Execute os comandos na raiz do repositório, com o SDK do .NET 10, Node.js e npm. A publicação requer acesso de escrita ao GitHub.
+Use os artefatos do workflow **Packages** para preparar a release. O workflow gera os pacotes e os testa. A publicação no GitHub é manual e requer acesso de escrita ao repositório.
 
 ## 1. Defina a versão
 
@@ -14,11 +12,22 @@ tag="v$version"
 npm --prefix web version "$version" --no-git-tag-version --allow-same-version
 ```
 
-Se a versão mudar, inclua `web/package.json` e `web/package-lock.json` no commit da release. Gere o pacote a partir desse commit e confirme que ele está no remoto.
+Se a versão mudar, inclua `web/package.json` e `web/package-lock.json` no commit que será publicado. O workflow lê a versão de `web/package.json` e a incorpora ao binário durante o empacotamento.
 
-## 2. Gere o pacote
+## 2. Obtenha os pacotes
 
-Use o nome `fuste-confere-v<VERSÃO>-<RID>.<EXTENSÃO>`. O RID identifica o sistema e a arquitetura. Use `.tar.gz` para Linux e `.zip` para Windows quando houver suporte validado. O checksum recebe o sufixo `.sha256`.
+O workflow **Packages** roda a cada push na `main` e também pode ser disparado manualmente nessa branch. No GitHub Actions, abra a execução correspondente ao commit que será publicado e baixe os ZIPs de **Artifacts** da mesma execução. Eles expiram em 14 dias.
+
+Cada ZIP de artefato contém um pacote e seu arquivo de checksum `.sha256`. Extraia esses dois arquivos para cada plataforma. São eles que serão anexados à release.
+
+| Plataforma | Pacote |
+| --- | --- |
+| Linux x64 | `fuste-confere-v<VERSÃO>-linux-x64.tar.gz` |
+| Windows x64 | `fuste-confere-v<VERSÃO>-win-x64.zip` |
+
+### Gerar localmente no Linux x64
+
+Como alternativa ao workflow para Linux x64, execute os comandos abaixo na raiz do repositório. Use o commit que será publicado, o SDK do .NET 10, Node.js e npm.
 
 ```sh
 rid=linux-x64
@@ -41,12 +50,18 @@ sha256sum "$package.tar.gz" > "$package.tar.gz.sha256"
 
 Avance após todos os comandos concluírem com sucesso. O pacote deve conter o executável, o runtime .NET, a interface em `wwwroot` e os arquivos de configuração e licença. [Publicação no .NET](https://learn.microsoft.com/en-us/dotnet/core/deploying/)
 
-## 3. Valide o arquivo gerado
+## 3. Valide os pacotes
+
+O workflow extrai cada pacote, inicia o executável e roda a suíte HTTP em uma pasta de dados temporária. A suíte também confere a versão e o RID da instalação. Verifique se os jobs das duas plataformas passaram na execução usada para a release. [Guia de validação ponta a ponta](../tests/e2e/README.md#executar-a-suíte-http)
+
+Para conferir um pacote Linux localmente, verifique o checksum, extraia o pacote e rode a mesma suíte. Depois, inicie o binário para o aceite no navegador.
 
 ```sh
+package="fuste-confere-$tag-linux-x64"
 sha256sum -c "$package.tar.gz.sha256"
 test_dir="$(mktemp -d)"
 tar -xzf "$package.tar.gz" -C "$test_dir"
+python3 tests/e2e/run.py --package-dir "$test_dir/$package" --package-version "$version" --package-rid linux-x64
 (
   cd "$test_dir/$package" &&
     FUSTE_CONFERE_DATA_DIR="$test_dir/dados" ./Fuste.Api --urls http://127.0.0.1:5082
@@ -60,10 +75,10 @@ tar -xzf "$package.tar.gz" -C "$test_dir"
 
 ## 4. Publique no GitHub
 
-Crie a tag a partir do mesmo commit usado no pacote e envie apenas essa tag.
+Crie a tag apontando explicitamente para o SHA do commit usado nos pacotes. Substitua `SHA_DO_COMMIT` pelo SHA da execução do workflow ou da compilação local validada.
 
 ```sh
-git tag -a "$tag" -m "Fuste $tag"
+git tag -a "$tag" SHA_DO_COMMIT -m "Fuste $tag"
 git push origin "$tag"
 ```
 
