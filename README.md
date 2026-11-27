@@ -1,4 +1,4 @@
-# Fuste
+<h1 align="center">Fuste</h1>
 
 ![Fuste, conferência de comissões](docs/fuste-banner-github.png)
 
