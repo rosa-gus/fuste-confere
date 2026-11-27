@@ -1,5 +1,7 @@
 # Fuste
 
+![Fuste, conferência de comissões](docs/fuste-banner-github.png)
+
 **Fuste** é um aplicativo local para representantes comerciais que precisam conferir comissões de vendas. Ele cruza as vendas faturadas com o demonstrativo enviado pela representada, calcula quanto era esperado conforme o acordo vigente e mostra as diferenças por venda. O identificador do projeto é `fuste-confere`.
 
 O projeto está em fase de **MVP**. O fluxo principal está disponível, mas pode haver instabilidades e lacunas de funcionalidade. Consulte os [limites técnicos](#limites-técnicos) para verificar se o seu processo cabe no escopo atual.

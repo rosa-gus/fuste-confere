@@ -598,13 +598,8 @@
 <div class="app-shell">
   <header class="topbar">
     <div class="header-identity">
-    <div class="brand">
-      <span class="brand-mark" aria-hidden="true"
-        ><span></span><span></span><span></span></span
-      >
-      <span class="brand-name"><strong>Fuste</strong></span>
-    </div>
-    <Tag type="blue" size="default">MVP</Tag>
+      <span class="brand-name">Fuste</span>
+      <Tag type="blue" size="default">MVP</Tag>
     </div>
     <OptionsMenu {updates} {updatesError} installedVersion={updates?.installedVersion ?? packageJson.version}
       onOpen={refreshUpdates} />
